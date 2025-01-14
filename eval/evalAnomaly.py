@@ -11,6 +11,7 @@ import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
+import torch.nn.functional as F
 
 seed = 42
 
@@ -25,26 +26,43 @@ NUM_CLASSES = 20
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
 
-def main():
+def get_anomaly_score(result,method='MSP'):
+    if method == 'MSP':
+        probabilities = F.softmax(result, dim=1)
+        return 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
+    elif method == 'MaxEntropy':
+        probabilities = F.softmax(result, dim=1) 
+        entropy = -np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
+        return 1.0 - entropy
+    elif method == 'MaxLogit':
+        return 1-np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
+
+
+
+def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',MyMethod='MSP'):
     parser = ArgumentParser()
     parser.add_argument(
         "--input",
-        default="/home/shyam/Mask2Former/unk-eval/RoadObsticle21/images/*.webp",
+        default="./Dataset/Validation_Dataset/RoadObsticle21/images/*.webp",
         nargs="+",
         help="A list of space separated input images; "
         "or a single glob pattern such as 'directory/*.jpg'",
     )  
-    parser.add_argument('--loadDir',default="../trained_models/")
+    parser.add_argument('--loadDir',default="./trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
     parser.add_argument('--loadModel', default="erfnet.py")
     parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
-    parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
+    parser.add_argument('--datadir', default="./Dataset/Cityscapes")
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--cpu', action='store_true')
     args = parser.parse_args()
     anomaly_score_list = []
     ood_gts_list = []
+
+    if(str(args.input[0]) == '.'):
+        myinput = MyPath
+    else: myinput = args.input[0]
 
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
@@ -77,14 +95,18 @@ def main():
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
     model.eval()
+
+
     
-    for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
+    for path in glob.glob(os.path.expanduser(myinput)):
+        
+
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
+
         images = images.permute(0,3,1,2)
         with torch.no_grad():
             result = model(images)
-        anomaly_result = 1.0 - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)            
+        anomaly_result = get_anomaly_score(result,MyMethod)        
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
@@ -116,7 +138,7 @@ def main():
         del result, anomaly_result, ood_gts, mask
         torch.cuda.empty_cache()
 
-    file.write( "\n")
+    file.write( "\n"+ MyMethod + '\n')
 
     ood_gts = np.array(ood_gts_list)
     anomaly_scores = np.array(anomaly_score_list)
@@ -139,7 +161,7 @@ def main():
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
 
-    file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
+    file.write((MyPath.split('/')[-3] + '    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
 if __name__ == '__main__':
