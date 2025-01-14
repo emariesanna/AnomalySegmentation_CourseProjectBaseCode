@@ -22,6 +22,8 @@ from dataset import cityscapes
 from erfnet import ERFNet
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
+import torch.nn.functional as F
+
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
@@ -36,6 +38,18 @@ target_transform_cityscapes = Compose([
     ToLabel(),
     Relabel(255, 19),   #ignore label to 19
 ])
+
+def getoutputfrommethod(outputs, method = "MaxLogit"):
+    if method == "MaxLogit":
+        return outputs.max(1)[1].unsqueeze(1)
+    elif method == "MSP":
+        return F.softmax(outputs, dim=1).max(1)[1].unsqueeze(1)
+    elif method == "MaxEntropy":
+        return torch.sum(F.softmax(outputs, dim=1) * F.log_softmax(outputs, dim=1), dim=1).unsqueeze(1)
+    else: 
+        print ("ERROR: Unkown method")
+        return None
+
 
 def main(args):
 
@@ -89,12 +103,16 @@ def main(args):
         inputs = Variable(images)
         with torch.no_grad():
             outputs = model(inputs)
+            print(outputs.size())
+            print(outputs.max(1)[1].unsqueeze(1).size())
 
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        #iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        iouEvalVal.addBatch(getoutputfrommethod(outputs, args.method).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
-        print (step, filenameSave)
+        if step%10 == 0:
+            print (step, filenameSave)
 
 
     iouVal, iou_classes = iouEvalVal.getIoU()
@@ -133,17 +151,23 @@ def main(args):
     print ("MEAN IoU: ", iouStr, "%")
 
 if __name__ == '__main__':
-    parser = ArgumentParser()
 
-    parser.add_argument('--state')
 
-    parser.add_argument('--loadDir',default="../trained_models/")
-    parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
-    parser.add_argument('--loadModel', default="erfnet.py")
-    parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
-    parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
-    parser.add_argument('--num-workers', type=int, default=4)
-    parser.add_argument('--batch-size', type=int, default=1)
-    parser.add_argument('--cpu', action='store_true')
+    met = [ "MSP", "MaxEntropy"]
+    for m in met:
+        print ("Method: ", m)
 
-    main(parser.parse_args())
+        parser = ArgumentParser()
+
+        parser.add_argument('--state')
+        parser.add_argument('--method', default=m)
+        parser.add_argument('--loadDir',default="./trained_models/")
+        parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
+        parser.add_argument('--loadModel', default="erfnet.py")
+        parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
+        parser.add_argument('--datadir', default="./Dataset/Cityscapes/")
+        parser.add_argument('--num-workers', type=int, default=4)
+        parser.add_argument('--batch-size', type=int, default=1)
+        parser.add_argument('--cpu', action='store_true')
+
+        main(parser.parse_args())

@@ -80,13 +80,19 @@ class cityscapes(Dataset):
 
     def __getitem__(self, index):
         filename = self.filenames[index]
+        fname =filename.split('\\')[-2] + '/' + filename.split('\\')[-1]
         filenameGt = self.filenamesGt[index]
+        fnameGt= filenameGt.split('\\')[-2] + '/' + filenameGt.split('\\')[-1]
 
-        #print(filename)
+        """print(filename)
+        print(filenameGt)
 
-        with open(image_path_city(self.images_root, filename), 'rb') as f:
+        print(fname)
+        print(fnameGt)"""
+
+        with open(image_path_city(self.images_root, fname), 'rb') as f:
             image = load_image(f).convert('RGB')
-        with open(image_path_city(self.labels_root, filenameGt), 'rb') as f:
+        with open(image_path_city(self.labels_root, fnameGt), 'rb') as f:
             label = load_image(f).convert('P')
 
         if self.input_transform is not None:

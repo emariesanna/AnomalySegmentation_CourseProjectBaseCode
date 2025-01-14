@@ -29,17 +29,21 @@ torch.backends.cudnn.benchmark = True
 def get_anomaly_score(result,method='MSP'):
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
-        return 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
+        retval = 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
+        print(retval)
+        return retval
     elif method == 'MaxEntropy':
         probabilities = F.softmax(result, dim=1) 
         entropy = -np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
         return 1.0 - entropy
     elif method == 'MaxLogit':
-        return 1-np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
+        retval = np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
+        #print(retval)
+        return retval
 
 
 
-def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',MyMethod='MSP'):
+def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',MyMethod='MaxLogit'):
     parser = ArgumentParser()
     parser.add_argument(
         "--input",
@@ -106,6 +110,7 @@ def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',My
         images = images.permute(0,3,1,2)
         with torch.no_grad():
             result = model(images)
+            
         anomaly_result = get_anomaly_score(result,MyMethod)        
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
