@@ -30,12 +30,12 @@ def get_anomaly_score(result,method='MSP'):
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
         retval = 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
-        print(retval)
+        #print(retval)
         return retval
     elif method == 'MaxEntropy':
         probabilities = F.softmax(result, dim=1) 
-        entropy = -np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
-        return 1.0 - entropy
+        entropy = np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
+        return entropy
     elif method == 'MaxLogit':
         retval = np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
         #print(retval)
@@ -100,7 +100,6 @@ def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',My
     print ("Model and weights LOADED successfully")
     model.eval()
 
-
     
     for path in glob.glob(os.path.expanduser(myinput)):
         
@@ -143,7 +142,7 @@ def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',My
         del result, anomaly_result, ood_gts, mask
         torch.cuda.empty_cache()
 
-    file.write( "\n"+ MyMethod + '\n')
+    file.write("\n")
 
     ood_gts = np.array(ood_gts_list)
     anomaly_scores = np.array(anomaly_score_list)

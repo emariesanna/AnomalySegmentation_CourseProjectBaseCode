@@ -38,14 +38,36 @@ target_transform_cityscapes = Compose([
     ToLabel(),
     Relabel(255, 19),   #ignore label to 19
 ])
-
+i =0
 def getoutputfrommethod(outputs, method = "MaxLogit"):
+    global i
+    i+=1
     if method == "MaxLogit":
-        return outputs.max(1)[1].unsqueeze(1)
+        retval = outputs.max(1)[1].unsqueeze(1).data
+        if i%100 == 0:
+            print(outputs.size())
+            #print(outputs.max(1))
+            print(retval.size())
+        return retval
     elif method == "MSP":
-        return F.softmax(outputs, dim=1).max(1)[1].unsqueeze(1)
+        retval = F.softmax(outputs, dim=1).max(1)[1].unsqueeze(1).data
+        print(retval)
+        return retval
     elif method == "MaxEntropy":
-        return torch.sum(F.softmax(outputs, dim=1) * F.log_softmax(outputs, dim=1), dim=1).unsqueeze(1)
+        probs =F.softmax(outputs, dim=1)
+        print(probs.size())
+        print(probs)
+
+        entropy = torch.sum(-probs * torch.log(probs + 1e-10), dim=1)  # Aggiunto epsilon per evitare log(0)
+        #entropy = torch.div(entropy, torch.log(torch.tensor(probs.shape[1], dtype=torch.float32)))
+        retval = entropy.unsqueeze(1).data
+        retval = torch.argmax(retval, dim=1, keepdim=True)
+        print(retval.size())
+        #if i%100 == 0:
+        #print(retval)
+        return retval
+
+
     else: 
         print ("ERROR: Unkown method")
         return None
@@ -103,11 +125,11 @@ def main(args):
         inputs = Variable(images)
         with torch.no_grad():
             outputs = model(inputs)
-            print(outputs.size())
-            print(outputs.max(1)[1].unsqueeze(1).size())
+            #print(outputs.size())
+            #print(outputs.max(1)[1].unsqueeze(1).size())
 
-        #iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
-        iouEvalVal.addBatch(getoutputfrommethod(outputs, args.method).data, labels)
+        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        #iouEvalVal.addBatch(getoutputfrommethod(outputs, args.method), labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
@@ -153,7 +175,7 @@ def main(args):
 if __name__ == '__main__':
 
 
-    met = [ "MSP", "MaxEntropy"]
+    met = [ "MaxEntropy"]
     for m in met:
         print ("Method: ", m)
 
