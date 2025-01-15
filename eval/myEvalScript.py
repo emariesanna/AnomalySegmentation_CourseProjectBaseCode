@@ -1,9 +1,10 @@
 #from eval import evalAnomaly
 import argparse
 from evalAnomaly import main as EAmain
+from evalAnomalyTemperature import main as EATmain
 import os
 
-def main():
+def main1():
     root = './Dataset/Validation_Dataset/'
     paths = ['RoadAnomaly21/images/*.png', 'RoadObsticle21/images/*.webp', 'RoadAnomaly/images/*.jpg', 'FS_LostFound_full/images/*.png', 'fs_static/images/*.jpg']
     methods = ['MSP', 'MaxEntropy','MaxLogit']
@@ -19,5 +20,24 @@ def main():
     
             EAmain(root + path, method)
 
+
+def main2():
+    root = './Dataset/Validation_Dataset/'
+    paths = ['RoadAnomaly21/images/*.png', 'RoadObsticle21/images/*.webp', 'RoadAnomaly/images/*.jpg', 'FS_LostFound_full/images/*.png', 'fs_static/images/*.jpg']
+    temperatures = [None,0.5,0.75,1.1]
+    if not os.path.exists('results_temp.txt'):
+            open('results_temp.txt', 'w').close()
+    file = open('results_temp.txt', 'a')
+    for t in temperatures:
+
+        
+        file.write( "\n t ="+ str(t) + '\n')
+
+        for path in paths:
+            print("now executing: ", path, "With temperature: ", t)
+    
+            EATmain(root + path, t)
+    file.close()
+
 if __name__ == '__main__':
-    main()
+    main2()

@@ -100,7 +100,7 @@ class cityscapes(Dataset):
         if self.target_transform is not None:
             label = self.target_transform(label)
 
-        return image, label, filename, filenameGt
+        return image, label#, filename, filenameGt
 
     def __len__(self):
         return len(self.filenames)
