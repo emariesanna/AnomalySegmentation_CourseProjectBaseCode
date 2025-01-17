@@ -110,10 +110,8 @@ def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp', M
     #if MyTemperature is not None:
     
     
-    model = ModelWithTemperature(model)
-    loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
-    model.set_temperature(loader)
-
+    model = ModelWithTemperature(model, temperature=MyTemperature)
+    
     model.eval()
 
     

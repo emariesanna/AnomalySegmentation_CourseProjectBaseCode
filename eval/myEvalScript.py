@@ -24,7 +24,7 @@ def main1():
 def main2():
     root = './Dataset/Validation_Dataset/'
     paths = ['RoadAnomaly21/images/*.png', 'RoadObsticle21/images/*.webp', 'RoadAnomaly/images/*.jpg', 'FS_LostFound_full/images/*.png', 'fs_static/images/*.jpg']
-    temperatures = [None,0.5,0.75,1.1]
+    temperatures = [1.7066885232925415]
     if not os.path.exists('results_temp.txt'):
             open('results_temp.txt', 'w').close()
     file = open('results_temp.txt', 'a')

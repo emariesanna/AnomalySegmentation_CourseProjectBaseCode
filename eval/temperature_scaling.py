@@ -1,6 +1,9 @@
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
+import random
+from torch.utils.data import DataLoader
+import gc
 
 
 class ModelWithTemperature(nn.Module):
@@ -38,6 +41,11 @@ class ModelWithTemperature(nn.Module):
         We're going to set it to optimize NLL.
         valid_loader (DataLoader): validation set loader
         """
+        # in set_temperature function:
+        valid_indices = random.sample(range(len(valid_loader.dataset)), int(len(valid_loader.dataset) * 0.2)) # Select 20% of data
+        valid_subset = torch.utils.data.Subset(valid_loader.dataset, valid_indices)
+        subset_loader = DataLoader(valid_subset, batch_size=1, shuffle=False)
+
         self.cuda()
         nll_criterion = nn.CrossEntropyLoss().cuda()
         ece_criterion = _ECELoss().cuda()
@@ -45,12 +53,19 @@ class ModelWithTemperature(nn.Module):
         # First: collect all the logits and labels for the validation set
         logits_list = []
         labels_list = []
+        i=0
         with torch.no_grad():
-            for input, label in valid_loader:
+            for input, label in subset_loader:
+                i+=1
                 input = input.cuda()
                 logits = self.model(input)
                 logits_list.append(logits)
                 labels_list.append(label)
+                if i % 1000 == 0:
+                    print(i)
+                    gc.collect() # Explicitly calling garbage collector
+                    torch.cuda.empty_cache() # Release unused memory
+
             logits = torch.cat(logits_list).cuda()
             labels = torch.cat(labels_list).cuda()
 
@@ -58,6 +73,10 @@ class ModelWithTemperature(nn.Module):
         before_temperature_nll = nll_criterion(logits, labels).item()
         before_temperature_ece = ece_criterion(logits, labels).item()
         print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_temperature_nll, before_temperature_ece))
+
+        gc.collect() # Explicitly calling garbage collector
+        torch.cuda.empty_cache() # Release unused memory
+
 
         # Next: optimize the temperature w.r.t. NLL
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
