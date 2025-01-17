@@ -13,160 +13,241 @@ from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barc
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 import torch.nn.functional as F
 
+# imposta il seed per il rng di python, numpy e pytorch
 seed = 42
-
-# general reproducibility
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 
-NUM_CHANNELS = 3
-NUM_CLASSES = 20
-# gpu training specific
+# forza pytorch a usare operazioni deterministiche
 torch.backends.cudnn.deterministic = True
+# abilita il benchmarking per ottimizzare le prestazioni, 
+# a scapito di un lieve elemento di non-determinismo in alcuni scenari
 torch.backends.cudnn.benchmark = True
+
+NUM_CHANNELS = 3
+# numero delle classi del dataset
+NUM_CLASSES = 20
+
+
+# *********************************************************************************************************************
+
+# funzione per copiare i pesi da uno state dictionary ad un modello
+# gestisce anche i casi in cui state_dict ha nomi di parametri diversi da quelli attesi dal modello (own_state)
+# in particolare, se i nomi dei parametri in state_dict hanno un prefisso "module." (come quando si salva un modello con DataParallel)
+# allora viene rimosso il prefisso prima che il parametro venga copiato nel modello
+def load_my_state_dict(model, state_dict):
+        # recupera lo state dictionary attuale del modello
+        own_state = model.state_dict()
+        # per ogni parametro nello state dictionary passato alla funzione
+        # (è un dizionario quindi fatto di coppie chiave-valore)
+        for name, param in state_dict.items():
+            # se il nome del parametro non è presente nello state dictionary del modello
+            if name not in own_state:
+                # se il nome del parametro ha il prefisso "module."
+                if name.startswith("module."):
+                    # rimuove il prefisso
+                    name = name.split("module.")[-1]
+                    # copia il parametro di state_dict nel modello
+                    own_state[name].copy_(param)
+                else:
+                    print(name, " not loaded")
+                    continue
+            # se il nome del parametro è nel modello
+            else:
+                # copia il parametro di state_dict nel modello
+                own_state[name].copy_(param)
+        return model
 
 def get_anomaly_score(result,method='MSP'):
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
         retval = 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
-        #print(retval)
         return retval
     elif method == 'MaxEntropy':
         probabilities = F.softmax(result, dim=1) 
         entropy = np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
         return entropy
     elif method == 'MaxLogit':
+        # retval has dimensions H x W
         retval = np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
-        #print(retval)
         return retval
-
+    
+# ********************************************************************************************************************
 
 
 def main(MyPath = './Dataset/Validation_Dataset/RoadObsticle21/images/*.webp',MyMethod='MaxLogit'):
+
+    # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
     parser = ArgumentParser()
-    parser.add_argument(
-        "--input",
+    # definisce gli argomenti accettati dal parser
+    # directory per le immagini di input
+    parser.add_argument("--input",
         default="./Dataset/Validation_Dataset/RoadObsticle21/images/*.webp",
-        nargs="+",
-        help="A list of space separated input images; "
-        "or a single glob pattern such as 'directory/*.jpg'",
-    )  
-    parser.add_argument('--loadDir',default="./trained_models/")
+        nargs="+", help="A list of space separated input images or a single glob pattern such as 'directory/*.jpg'",
+    )
+    # directory per la cartella contentente il modello pre-addestrato
+    parser.add_argument('--loadDir', default="./trained_models/")
+    # file dei pesi (dentro la cartella loadDir)
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
+    # directory per il modello
     parser.add_argument('--loadModel', default="erfnet.py")
-    parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
+    # cartella del dataset da utilizzare (val o train)
+    parser.add_argument('--subset', default="val")
+    # directory del dataset
     parser.add_argument('--datadir', default="./Dataset/Cityscapes")
+    # numero di thread da usare per il caricamento dei dati
     parser.add_argument('--num-workers', type=int, default=4)
+    # dimensione del batch per l'elaborazione delle immagini 
+    # (quante immagini alla volta vengono elaborate, maggiore è più veloce ma richiede più memoria)
     parser.add_argument('--batch-size', type=int, default=1)
+    # flag per forzare l'utilizzo della cpu (action='store_true' rende l'argomento opzionale e false di default)
     parser.add_argument('--cpu', action='store_true')
+    # costruisce un oggetto contenente gli argomenti passati da riga di comando (tipo Namespace)
     args = parser.parse_args()
+    # inizializza due liste vuote per contenere i risultati
     anomaly_score_list = []
     ood_gts_list = []
 
+    # se il primo argomento passato è un punto, allora usa il parametro passato al main per il path delle immagini
     if(str(args.input[0]) == '.'):
         myinput = MyPath
     else: myinput = args.input[0]
 
+    # se non esiste il file results.txt, crea un file vuoto
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
     file = open('results.txt', 'a')
 
+    # mette insieme gli argomenti del parser e definisce il path del modello e dei pesi
     modelpath = args.loadDir + args.loadModel
     weightspath = args.loadDir + args.loadWeights
 
     print ("Loading model: " + modelpath)
     print ("Loading weights: " + weightspath)
 
+    # crea un modello ERFNet con NUM_CLASSES classi
     model = ERFNet(NUM_CLASSES)
 
+    # se l'argomento cpu non è stato passato, allora imposta torch per usare la gpu
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
 
-    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
-        own_state = model.state_dict()
-        for name, param in state_dict.items():
-            if name not in own_state:
-                if name.startswith("module."):
-                    own_state[name.split("module.")[-1]].copy_(param)
-                else:
-                    print(name, " not loaded")
-                    continue
-            else:
-                own_state[name].copy_(param)
-        return model
+    # crea uno state dictionary a partire dai pesi salvati
+    # lo state dictionary è una struttura dati che contiene i pesi e i buffer del modello
+    # (i buffer sono valori statici necessari per i calcoli, come ad esempio la media e la varianza)
+    # la parte map_location serve a salvare il dizionario su un dispositivo diverso da quello in cui sono salvati i pesi
+    state_dict = torch.load(weightspath, map_location=lambda storage, loc: storage)
 
-    model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
+    # carica nel modello lo state dictionary creato
+    model = load_my_state_dict(model, state_dict)
+
     print ("Model and weights LOADED successfully")
+
+    # imposta il modello in modalità di valutazione
+    # questo cambia alcuni comportamenti come la batch normalization 
+    # (che viene calcolata su media e varianza globali invece che del batch) 
+    # e il dropout (che viene disattivato)
     model.eval()
 
-    
-    for path in glob.glob(os.path.expanduser(myinput)):
+    # complete input images path expanding any wildcard (~) representing the user name in the directories
+    myinput = os.path.expanduser(myinput)
+
+    # for each path in the input path list (glob.glob returns a list of paths expanding the * wildcard)
+    for path in glob.glob(myinput):
         
+        # load the image, converting it to an RGB tensor (dimensions are W x H x 3)
+        image = Image.open(path).convert('RGB')
+        # converts the tensor to a numpy tensor and loads it on the gpu, adding a dimension and converting it to float (dimensions are 1 x H x W x 3)
+        image = torch.from_numpy(np.array(image)).unsqueeze(0).float()
+        # permutes the dimensions of the tensor (dimensions are 1 x 3 x H x W)
+        image = image.permute(0,3,1,2)
 
-        images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
-
-        images = images.permute(0,3,1,2)
+        # launches the model with the image as input while disabling gradient computation (saves memory and computation time)
         with torch.no_grad():
-            result = model(images)
-            
-        anomaly_result = get_anomaly_score(result,MyMethod)        
-        pathGT = path.replace("images", "labels_masks")                
+            # result size is 1 x 20 x H x W
+            result = model(image)
+        
+        # calculates the anomaly score using the method specified
+        # anomaly_result size is H x W
+        anomaly_result = get_anomaly_score(result,MyMethod)
+        
+        # creates the path for the ground truth mask
+        pathGT = path.replace("images", "labels_masks")
+        
+        # corrects the ground truth format if different from the images         
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
         if "fs_static" in pathGT:
-           pathGT = pathGT.replace("jpg", "png")                
+           pathGT = pathGT.replace("jpg", "png")
         if "RoadAnomaly" in pathGT:
-           pathGT = pathGT.replace("jpg", "png")  
+           pathGT = pathGT.replace("jpg", "png")
 
+        # opens the ground truth mask image and converts it to a numpy tensor
         mask = Image.open(pathGT)
+        # ood_gts stands for out-of-distribution ground truths
+        # the ground truth mask highlights the pixels that are not part of any class
         ood_gts = np.array(mask)
 
+        # corrects the gray scale values of the ground truth mask (???)
         if "RoadAnomaly" in pathGT:
             ood_gts = np.where((ood_gts==2), 1, ood_gts)
         if "LostAndFound" in pathGT:
             ood_gts = np.where((ood_gts==0), 255, ood_gts)
             ood_gts = np.where((ood_gts==1), 0, ood_gts)
             ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
-
         if "Streethazard" in pathGT:
             ood_gts = np.where((ood_gts==14), 255, ood_gts)
             ood_gts = np.where((ood_gts<20), 0, ood_gts)
             ood_gts = np.where((ood_gts==255), 1, ood_gts)
 
+        # checks if the ground truth mask contains at least one pixel with value 1
         if 1 not in np.unique(ood_gts):
-            continue              
+            continue
         else:
-             ood_gts_list.append(ood_gts)
-             anomaly_score_list.append(anomaly_result)
+            # if the ground truth contains an anomaly, appends the ground truth mask and the anomaly score to the lists
+            ood_gts_list.append(ood_gts)
+            anomaly_score_list.append(anomaly_result)
+
+        # releases the memory used by the result, anomaly_result, ood_gts and mask tensors
         del result, anomaly_result, ood_gts, mask
         torch.cuda.empty_cache()
 
-    file.write("\n")
+    # creates two numpy tensor from the lists
+    ood_gts_np = np.array(ood_gts_list)
+    anomaly_scores_np = np.array(anomaly_score_list)
 
-    ood_gts = np.array(ood_gts_list)
-    anomaly_scores = np.array(anomaly_score_list)
+    # creates two boolean lists of masks for the out-of-distribution and in-distribution ground truths
+    ood_mask = (ood_gts_np == 1)
+    ind_mask = (ood_gts_np == 0)
+    
+    # creates two lists filtering anomaly scores for the out-of-distribution and in-distribution ground truths
+    ood_out = anomaly_scores_np[ood_mask]
+    ind_out = anomaly_scores_np[ind_mask]
 
-    ood_mask = (ood_gts == 1)
-    ind_mask = (ood_gts == 0)
-
-    ood_out = anomaly_scores[ood_mask]
-    ind_out = anomaly_scores[ind_mask]
-
+    # creates two lists of labes
     ood_label = np.ones(len(ood_out))
     ind_label = np.zeros(len(ind_out))
+
     
+    # concatenates the lists of anomaly scores and labels
     val_out = np.concatenate((ind_out, ood_out))
     val_label = np.concatenate((ind_label, ood_label))
 
+    # the result is two lists of anomaly scores and labels ordered by the label value
+
+    # calculates the AUPRC score and the FPR@TPR95 score
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
 
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
 
+    file.write("\n")
     file.write((MyPath.split('/')[-3] + '    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
+
 if __name__ == '__main__':
     main()
+
