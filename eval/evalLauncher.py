@@ -26,8 +26,8 @@ torch.backends.cudnn.benchmark = True
 
 # numero delle classi del dataset
 NUM_CLASSES = 20
-# flag per passare da valutazione di IOU a valutazione di Anomaly Detection
-IOU = False
+# flag per passare da valutazione di Anomaly Detection (0) a valutazione di IOU (1) a entrambe (2)
+IOU = 2
 # modello da utilizzare (erfnet o enet)
 MODEL = "erfnet"
 DatasetDir = {
@@ -87,8 +87,8 @@ def main():
     # definisce gli argomenti accettati dal parser
     # nomi dei dataset da utilizzare
     parser.add_argument("--datasets",
-        default=["FSstatic","RoadAnomaly","RoadAnomaly21","RoadObsticle21","LostFound"],
-        nargs="+", help="A list of space separated dataset names")
+                        default=["FSstatic","RoadAnomaly","RoadAnomaly21","RoadObsticle21","LostFound"],
+                        nargs="+", help="A list of space separated dataset names")
     # directory per la cartella contentente il modello pre-addestrato
     parser.add_argument('--loadDir', default="./trained_models/")
     # file dei pesi (dentro la cartella loadDir)
@@ -107,7 +107,8 @@ def main():
     # flag per forzare l'utilizzo della cpu (action='store_true' rende l'argomento opzionale e false di default)
     parser.add_argument('--cpu', action='store_true')
     # quale metodo utilizzare per l'anomaly detection
-    parser.add_argument('--method', default="MaxLogit", help="Can be MSP, MaxEntropy or MaxLogit")
+    parser.add_argument('--methods', default=["MaxLogit", "MaxEntropy", "MSP"],
+                        nargs="+", help="A list of space separated method names between MSP, MaxEntropy and MaxLogit")
     # quale temperatura utilizzare per il temperature scaling
     parser.add_argument('--temperature', default=0 , help="Set 0 to disable temperature scaling")
     # costruisce un oggetto contenente gli argomenti passati da riga di comando (tipo Namespace)
@@ -148,15 +149,31 @@ def main():
     # e il dropout (che viene disattivato)
     model.eval()
 
-    if IOU:
-        print("Evaluating IOU")
-        eval_iou(args.datadir, args.cpu, NUM_CLASSES, model)
-    else:
+    # se non esiste il file results.txt, crea un file vuoto
+    if not os.path.exists('results.txt'):
+        open('results.txt', 'w').close()
+    
+    # cancella il file
+    open('results.txt', 'w').close()
+
+    # lo riapre in modalità append (aggiunge testo alla fine)
+    file = open('results.txt', 'a')
+
+    if IOU == 1 or IOU == 2:
+        for method in args.methods:
+            print("Evaluating IOU", "using method", method)
+            eval_iou(method, args.datadir, args.cpu, NUM_CLASSES, model, file)
+    if IOU == 0 or IOU == 2:
         print("Evaluating Anomaly Detection")
-        for dataset in args.datasets:
-            print("Dataset", dataset)
-            dataset_dir = DatasetDir[dataset]
-            evalAnomaly(dataset_dir, dataset , model, args.method)
+        for method in args.methods:
+            for dataset in args.datasets:
+                print("Dataset", dataset, "using method", method)
+                dataset_dir = DatasetDir[dataset]
+                evalAnomaly(dataset_dir, dataset , model, method, file)
+
+    # chiude il file
+    file.close()
+
 
 if __name__ == '__main__':
     main()

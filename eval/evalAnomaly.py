@@ -1,55 +1,45 @@
-import os
-
-
-import cv2
 import glob
 import torch
-import random
 from PIL import Image
 import numpy as np
-from erfnet import ERFNet
-import os.path as osp
-from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr
 from sklearn.metrics import average_precision_score
 import torch.nn.functional as F
-from temperature_scaling import ModelWithTemperature
-from enet_pytorch_cityscapes import cityscapes_enet_pytorch as ENet
+
 
 # *********************************************************************************************************************
 
-def get_anomaly_score(result,method='MSP'):
+def get_anomaly_score(result, method='MSP'):
+    global msp_printed, max_entropy_printed, max_logit_printed
+
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
-        retval = 1-np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
+        retval = 1 - np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
         return retval
+
     elif method == 'MaxEntropy':
-        probabilities = F.softmax(result, dim=1) 
-        entropy = np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
+        probabilities = F.softmax(result, dim=1)
+        entropy = -np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
         return entropy
+
     elif method == 'MaxLogit':
-        # retval has dimensions H x W
         retval = np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
         return retval
     
 # ********************************************************************************************************************
 
 
-def main(dataset_dir, dataset_name, model, method):
+def main(dataset_dir, dataset_name, model, method, file):
 
     # crea due liste vuote dove salvare i risultati
     ood_gts_list = []
     anomaly_score_list = []
 
-    # se non esiste il file results.txt, crea un file vuoto
-    if not os.path.exists('results.txt'):
-        open('results.txt', 'w').close()
-    file = open('results.txt', 'a')
-
     # for each path in the input path list (glob.glob returns a list of paths expanding the * wildcard)
     for path in glob.glob(dataset_dir):
         
-        print(path)
+        # print(path)
+
         # load the image, converting it to an RGB tensor (dimensions are W x H x 3)
         image = Image.open(path).convert('RGB')
         # converts the tensor to a numpy tensor and loads it on the gpu, adding a dimension and converting it to float (dimensions are 1 x H x W x 3)
@@ -60,10 +50,13 @@ def main(dataset_dir, dataset_name, model, method):
         # launches the model with the image as input while disabling gradient computation (saves memory and computation time)
         with torch.no_grad():
             # result size is 1 x 20 x H x W
+            # the model returns for each pixel the logits for each class
             result = model(image)
         
         # calculates the anomaly score using the method specified
         # anomaly_result size is H x W
+        # the anomaly score is a measure of confident the model is about the prediction
+        # a high anomaly score means the pixel might represent an object class out of the distribution
         anomaly_result = get_anomaly_score(result, method)
         
         # creates the path for the ground truth mask
@@ -129,7 +122,8 @@ def main(dataset_dir, dataset_name, model, method):
     val_out = np.concatenate((ind_out, ood_out))
     val_label = np.concatenate((ind_label, ood_label))
 
-    # the result is two lists of anomaly scores and labels ordered by the label value
+    # the result is two lists, one for anomaly scores and the other for the labels indicating if the pixel is out-of-distribution or in-distribution
+    # both lists are ordered by the label value
 
     print("Calculating AUPRC and FPR@TPR95...")
 
@@ -140,7 +134,6 @@ def main(dataset_dir, dataset_name, model, method):
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
 
+    file.write(method + " " + dataset_name + '\tAUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0) )
     file.write("\n")
-    file.write(dataset_name + '\tAUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0) )
-    file.close()
 

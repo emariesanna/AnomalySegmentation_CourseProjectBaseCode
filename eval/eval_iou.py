@@ -13,12 +13,12 @@ from torchvision.transforms import Compose, Resize
 from torchvision.transforms import ToTensor
 
 from dataset import cityscapes
-from erfnet import ERFNet
 from transform import Relabel, ToLabel
 from iouEval import iouEval, getColorEntry
 
+# verificare come utilizzare il parametro method
 
-def main(model, datadir, cpu, num_classes=20):
+def main(method, model, datadir, cpu, num_classes, file):
 
     input_transform_cityscapes = Compose([
         Resize(512, Image.BILINEAR),
@@ -31,7 +31,6 @@ def main(model, datadir, cpu, num_classes=20):
     ])        
 
     loader = DataLoader(cityscapes(datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
-
 
     iouEvalVal = iouEval(num_classes)
 
@@ -46,13 +45,15 @@ def main(model, datadir, cpu, num_classes=20):
         with torch.no_grad():
             outputs = model(inputs)
 
+        # anomaly_scores = get_anomaly_score(outputs, method)
+
         outputs = outputs.max(1)[1].unsqueeze(1).data
         labels = labels.unsqueeze(0).data
 
         iouEvalVal.addBatch(outputs, labels)
 
-        # filenameSave = filename[0].split("leftImg8bit/")[1] 
-        # print (step, filenameSave)
+        filenameSave = filename[0].split("leftImg8bit/")[1] 
+        print (step, filenameSave)
 
     iouVal, iou_classes = iouEvalVal.getIoU()
 
@@ -88,3 +89,6 @@ def main(model, datadir, cpu, num_classes=20):
     print("=======================================")
     iouStr = getColorEntry(iouVal)+'{:0.2f}'.format(iouVal*100) + '\033[0m'
     print ("MEAN IoU: ", iouStr, "%")
+
+    file.write(method + "\tMEAN IoU: ", iouStr, "%")
+    file.write("\n")
