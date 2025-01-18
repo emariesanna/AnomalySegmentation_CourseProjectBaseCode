@@ -66,15 +66,12 @@ class cityscapes(Dataset):
 
     def __init__(self, root, input_transform=None, target_transform=None, subset='val'):
 
-        #unisce la root di cityscapes con la cartella delle immagini e delle label e il corretto subset
         self.images_root = os.path.join(root, 'leftImg8bit/' + subset)
         self.labels_root = os.path.join(root, 'gtFine/' + subset)
-
-        # crea una lista dei path di tutte le immagini (compresi di root)
+        print(self.images_root, self.labels_root)
         self.filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.images_root)) for f in fn if is_image(f)]
         self.filenames.sort()
 
-        # crea una lista dei path di tutte le label (compresi di root)
         self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
         self.filenamesGt.sort()
 
@@ -82,13 +79,20 @@ class cityscapes(Dataset):
         self.target_transform = target_transform
 
     def __getitem__(self, index):
-        
         filename = self.filenames[index]
+        fname =filename.split('\\')[-2] + '/' + filename.split('\\')[-1]
         filenameGt = self.filenamesGt[index]
+        fnameGt= filenameGt.split('\\')[-2] + '/' + filenameGt.split('\\')[-1]
 
-        with open(filename, 'rb') as f:
+        """print(filename)
+        print(filenameGt)
+
+        print(fname)
+        print(fnameGt)"""
+
+        with open(image_path_city(self.images_root, fname), 'rb') as f:
             image = load_image(f).convert('RGB')
-        with open(filenameGt, 'rb') as f:
+        with open(image_path_city(self.labels_root, fnameGt), 'rb') as f:
             label = load_image(f).convert('P')
 
         if self.input_transform is not None:
@@ -100,3 +104,4 @@ class cityscapes(Dataset):
 
     def __len__(self):
         return len(self.filenames)
+
