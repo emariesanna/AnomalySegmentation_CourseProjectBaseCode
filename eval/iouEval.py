@@ -21,9 +21,14 @@ class iouEval:
 
     def addBatch(self, x, y):   #x=preds, y=targets
         #sizes should be "batch_size x nClasses x H x W"
+
+        #print ("X size: ", x.size())
+        #print ("Y size: ", y.size())
         
         #print ("X is cuda: ", x.is_cuda)
         #print ("Y is cuda: ", y.is_cuda)
+
+        #print("Nclasses: ", self.nClasses)
 
         if (x.is_cuda or y.is_cuda):
             x = x.cuda()
@@ -58,7 +63,7 @@ class iouEval:
         fpmult = x_onehot * (1-y_onehot-ignores) #times prediction says its that class and gt says its not (subtracting cases when its ignore label!)
         fp = torch.sum(torch.sum(torch.sum(fpmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
         fnmult = (1-x_onehot) * (y_onehot) #times prediction says its not that class and gt says it is
-        fn = torch.sum(torch.sum(torch.sum(fnmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze() 
+        fn = torch.sum(torch.sum(torch.sum(fnmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
 
         self.tp += tp.double().cpu()
         self.fp += fp.double().cpu()

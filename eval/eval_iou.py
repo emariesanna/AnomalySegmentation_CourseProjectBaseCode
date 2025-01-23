@@ -3,6 +3,7 @@
 # Eduardo Romera
 #######################
 
+from print_output import print_output
 import torch
 import time
 from PIL import Image
@@ -13,13 +14,13 @@ from iouEval import iouEval, getColorEntry
 
 # verificare come utilizzare il parametro method
 
-def main(method, model, datadir, cpu, num_classes):
+def main(model, datadir, cpu, num_classes, ignoreIndex=19):
 
     # load the dataset
-    loader = get_cityscapes_loader(datadir)
+    loader = get_cityscapes_loader(datadir, 10, 'val')
 
     # create the IoU evaluator
-    iouEvalVal = iouEval(num_classes)
+    iouEvalVal = iouEval(num_classes, ignoreIndex=ignoreIndex)
 
     # start the timer used for the prints
     start = time.time()
@@ -34,12 +35,11 @@ def main(method, model, datadir, cpu, num_classes):
         # launch the model with the images as input while disabling gradient computation
         inputs = Variable(images)
         with torch.no_grad():
-            outputs = model(inputs)
-
-        # anomaly_scores = get_anomaly_score(outputs, method)
-
-        outputs = outputs.max(1)[1].unsqueeze(1).data
-        labels = labels.unsqueeze(0).data
+            out = model(inputs)
+            
+        # get the max logit value for each pixel
+        outputs = out.max(1)[1].unsqueeze(1).data
+        labels = labels.unsqueeze(1).data
 
         # add the batch to the IoU evaluator
         iouEvalVal.addBatch(outputs, labels)
@@ -47,6 +47,9 @@ def main(method, model, datadir, cpu, num_classes):
         # print the filename of the image
         filenameSave = filename[0].split("leftImg8bit/")[1] 
         print (step, filenameSave)
+
+        if step in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
+           print_output(out[0, :, :, :], filename[0].split("leftImg8bit/")[1])
 
     # get the IoU results
     iouVal, iou_classes = iouEvalVal.getIoU()
@@ -81,15 +84,10 @@ def main(method, model, datadir, cpu, num_classes):
     print(iou_classes_str[16], "train")
     print(iou_classes_str[17], "motorcycle")
     print(iou_classes_str[18], "bicycle")
+    if ignoreIndex == -1:
+        print(iou_classes_str[19], "void")
     print("=======================================")
     iouStr = getColorEntry(iouVal)+'{:0.2f}'.format(iouVal*100) + '\033[0m'
     print ("MEAN IoU: ", iouStr, "%")
 
-    # apre il file in modalità append (aggiunge testo alla fine)
-    file = open('results.txt', 'a')
-
-    file.write(method + "\tMEAN IoU: ", iouStr, "%")
-    file.write("\n")
-
-    # chiude il file
-    file.close()
+    return iouVal

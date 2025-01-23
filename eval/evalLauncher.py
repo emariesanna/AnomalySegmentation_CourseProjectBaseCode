@@ -5,7 +5,7 @@ import torch
 from erfnet import ERFNet
 from argparse import ArgumentParser
 from temperature_scaling3 import ModelWithTemperature
-from enet_pytorch_cityscapes import cityscapes_enet_pytorch as ENet
+from enet import ENet
 from evalAnomaly import main as evalAnomaly
 from eval_iou import main as eval_iou
 
@@ -23,10 +23,14 @@ torch.backends.cudnn.benchmark = True
 
 # numero delle classi del dataset
 NUM_CLASSES = 20
-# flag per passare da valutazione di Anomaly Detection (0) a valutazione di IOU (1) a entrambe (2)
-IOU = 0
+# flag per attivare valutazione di IOU
+IOU = 1
+# flag per attivare valutazione di Anomaly Detection tramite anomaly scores
+ANOMALY = 0
+# flag per attivare valutazione di Anomaly Detection tramite void class
+VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "erfnet"
+MODEL = "enet"
 DatasetDir = {
     "LostFound": "./Dataset/Validation_Dataset/FS_LostFound_full/images/*.png",
     "FSstatic": "./Dataset/Validation_Dataset/fs_static/images/*.jpg",
@@ -76,7 +80,7 @@ def main():
         Model = ERFNet
     elif MODEL == "enet":
         modelclass = "enet.py"
-        weights = "enet_pytorch_cityscapes.pth"
+        weights = "enet_best_model.pth"
         Model = ENet
 
     # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
@@ -144,45 +148,64 @@ def main():
     # e il dropout (che viene disattivato)
     model.eval()
 
+    file = open('results.txt', 'a')
+    file.write("MODEL " + MODEL.capitalize() + "\n")
+    file.close()
+
     # se non esiste il file results.txt, crea un file vuoto
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
 
     if IOU == 1:
-        print("Evaluating IOU", "using method", method)
-        eval_iou(args.datadir, args.cpu, NUM_CLASSES, model)
+        print("Evaluating IOU")
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19)
+        file = open('results.txt', 'a')
+        file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
+        file.write("\n")
+        file.close()
     
-    print("Evaluating Anomaly Detection")
+    if ANOMALY == 1:
+        print("Evaluating Anomaly Detection")
 
-    def iterate_datasets(mod):
-        for dataset in args.datasets:
-            dataset_string = "Dataset " + dataset
-            dataset_dir = DatasetDir[dataset]
-            prc_auc, fpr = evalAnomaly(dataset_dir, mod, method)
-            result_string = 'AUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0)
-            print(temperature_string + dataset_string + method_string + "\n" + result_string)
-            file = open('results.txt', 'a')
-            file.write(temperature_string + dataset_string + method_string + "\n" + result_string + "\n")
-            file.close()
-    
-    for method in args.methods:
+        def iterate_datasets(mod):
+            for dataset in args.datasets:
+                dataset_string = "Dataset " + dataset
+                dataset_dir = DatasetDir[dataset]
+                prc_auc, fpr = evalAnomaly(dataset_dir, mod, method)
+                result_string = 'AUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0)
+                print(temperature_string + dataset_string + method_string + "\n" + result_string)
+                file = open('results.txt', 'a')
+                file.write(temperature_string + dataset_string + method_string + "\n" + result_string + "\n")
+                file.close()
 
-        method_string = " using method: " + method
+        for method in args.methods:
 
-        if method == "MSP":
-            for temperature in args.temperatures:
-                model_t = ModelWithTemperature(model, temperature)
-                iterate_datasets(model_t)
-                temperature_string = "Temperature Scaling: " + str(temperature) + "\t"
-        
-        temperature_string = ""
-        iterate_datasets(model)
+            method_string = " using method: " + method
+
+            if method == "MSP":
+                for temperature in args.temperatures:
+                    if temperature != 0:
+                        model_t = ModelWithTemperature(model, temperature)
+                    else:
+                        model_t = model
+                    iterate_datasets(model_t)
+                    temperature_string = "Temperature Scaling: " + str(temperature) + "\t"
+
+            temperature_string = ""
+            iterate_datasets(model)
+
+    if VOID == 1:
+        print("Evaluating Void Class IoU")
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=-1)
+        file = open('results.txt', 'a')
+        file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
+        file.write("\n")
+        file.close()
+
+    file = open('results.txt', 'a')
+    file.write("\n\n")
+    file.close()
             
             
-
-                
-    
-
-
 if __name__ == '__main__':
     main()

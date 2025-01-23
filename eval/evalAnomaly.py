@@ -11,6 +11,9 @@ import torch.nn.functional as F
 # *********************************************************************************************************************
 
 def get_anomaly_score(result, method='MSP'):
+
+    # filtering void class
+    # result = result[:, :-1, :, :]
     
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
