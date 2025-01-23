@@ -8,7 +8,9 @@ import os
 
 from PIL import Image
 
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import Compose, Resize, ToTensor
+from transform import Relabel, ToLabel
 
 EXTENSIONS = ['.jpg', '.png']
 
@@ -29,6 +31,23 @@ def image_path_city(root, name):
 
 def image_basename(filename):
     return os.path.basename(os.path.splitext(filename)[0])
+
+def get_cityscapes_loader(datadir, batch_size, subset):
+
+    # preprocessign of the input images
+    input_transform_cityscapes = Compose([
+        Resize(512, Image.BILINEAR),
+        ToTensor(),
+    ])
+    target_transform_cityscapes = Compose([
+        Resize(512, Image.NEAREST),
+        ToLabel(),
+        Relabel(255, 19),   #ignore label to 19
+    ])
+
+    return DataLoader(cityscapes(datadir, input_transform_cityscapes, target_transform_cityscapes, subset=subset), num_workers=4, batch_size=batch_size, shuffle=False)
+    
+
 
 class VOC12(Dataset):
 

@@ -8,39 +8,30 @@ import time
 from PIL import Image
 
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, Resize
-from torchvision.transforms import ToTensor
-
-from dataset import cityscapes
-from transform import Relabel, ToLabel
+from dataset import get_cityscapes_loader
 from iouEval import iouEval, getColorEntry
 
 # verificare come utilizzare il parametro method
 
-def main(method, model, datadir, cpu, num_classes, file):
+def main(method, model, datadir, cpu, num_classes):
 
-    input_transform_cityscapes = Compose([
-        Resize(512, Image.BILINEAR),
-        ToTensor(),
-    ])
-    target_transform_cityscapes = Compose([
-        Resize(512, Image.NEAREST),
-        ToLabel(),
-        Relabel(255, 19),   #ignore label to 19
-    ])        
+    # load the dataset
+    loader = get_cityscapes_loader(datadir)
 
-    loader = DataLoader(cityscapes(datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
-
+    # create the IoU evaluator
     iouEvalVal = iouEval(num_classes)
 
+    # start the timer used for the prints
     start = time.time()
 
     for step, (images, labels, filename, filenameGt) in enumerate(loader):
+
+        # if the cpu flag is not set, move the data to the gpu
         if (not cpu):
             images = images.cuda()
             labels = labels.cuda()
 
+        # launch the model with the images as input while disabling gradient computation
         inputs = Variable(images)
         with torch.no_grad():
             outputs = model(inputs)
@@ -50,14 +41,18 @@ def main(method, model, datadir, cpu, num_classes, file):
         outputs = outputs.max(1)[1].unsqueeze(1).data
         labels = labels.unsqueeze(0).data
 
+        # add the batch to the IoU evaluator
         iouEvalVal.addBatch(outputs, labels)
 
+        # print the filename of the image
         filenameSave = filename[0].split("leftImg8bit/")[1] 
         print (step, filenameSave)
 
+    # get the IoU results
     iouVal, iou_classes = iouEvalVal.getIoU()
 
     iou_classes_str = []
+
     for i in range(iou_classes.size(0)):
         iouStr = getColorEntry(iou_classes[i])+'{:0.2f}'.format(iou_classes[i]*100) + '\033[0m'
         iou_classes_str.append(iouStr)
@@ -90,5 +85,11 @@ def main(method, model, datadir, cpu, num_classes, file):
     iouStr = getColorEntry(iouVal)+'{:0.2f}'.format(iouVal*100) + '\033[0m'
     print ("MEAN IoU: ", iouStr, "%")
 
+    # apre il file in modalità append (aggiunge testo alla fine)
+    file = open('results.txt', 'a')
+
     file.write(method + "\tMEAN IoU: ", iouStr, "%")
     file.write("\n")
+
+    # chiude il file
+    file.close()

@@ -11,10 +11,10 @@ class ModelWithTemperature(nn.Module):
         NB: Output of the neural network should be the classification logits,
             NOT the softmax (or log softmax)!
     """
-    def __init__(self, model):
+    def __init__(self, model, temperature=1.5):
         super(ModelWithTemperature, self).__init__()
         self.model = model
-        self.temperature = nn.Parameter(torch.ones(1) * 1.5)
+        self.temperature = nn.Parameter(torch.ones(1) * float(temperature), requires_grad=True)
 
     def forward(self, input):
         logits = self.model(input)
@@ -25,8 +25,64 @@ class ModelWithTemperature(nn.Module):
         Perform temperature scaling on logits
         """
         # Expand temperature to match the size of logits
-        temperature = self.temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
+        temperature = self.temperature.unsqueeze(1).expand(logits.size(0), logits.size(1),logits.size(2),logits.size(3)).cuda()
+
         return logits / temperature
+    
+    def get_nll_ece(self, valid_loader, temperature_scale = False, compute_gradients = False):
+
+        nll_criterion = nn.CrossEntropyLoss().cuda()
+        ece_criterion = _ECELoss().cuda()
+
+        total_nll = torch.tensor(0.0, device='cuda', requires_grad=compute_gradients)
+        total_ece = torch.tensor(0.0, device='cuda')
+        total_samples = 0
+
+        for step, (input, label, filename, filenameGt) in enumerate(valid_loader):
+
+            print (step, filename[0].split("leftImg8bit/")[1])
+            
+            input = input.cuda()
+            label = label.cuda()
+            # logits is a pytorch tensor
+            if compute_gradients:
+                print("Computing gradients")
+                logits = self.model(input)
+            else:
+                with torch.no_grad():
+                    print("Not computing gradients")
+                    logits = self.model(input)
+
+            if temperature_scale:
+                print("Temperature scaling")
+                logits = self.temperature_scale(logits)
+
+            # Calcola NLL e ECE direttamente sul batch corrente
+            batch_nll = nll_criterion(logits, label) * input.size(0)
+            with torch.no_grad():
+                batch_ece = ece_criterion(logits, label) * input.size(0)
+            
+            # Aggiorna il conteggio totale
+            # la forma x += y restituisce errori di shape non corrispondenti
+            total_nll = total_nll + batch_nll
+            with torch.no_grad():
+                total_ece = total_ece + batch_ece
+            total_samples += input.size(0)
+
+            print(f"Gradients: {total_nll.grad}")  # Debug per verificare il valore del gradiente   
+            # print(torch.cuda.memory_summary())
+            allocated = torch.cuda.memory_allocated()
+            reserved = torch.cuda.memory_reserved()
+            print(f"Memory Allocated: {allocated / (1024 ** 2):.2f} MB")
+            print(f"Memory Reserved: {reserved / (1024 ** 2):.2f} MB")
+
+            # Libera la memoria non necessaria
+            del input, label, logits, batch_nll, batch_ece
+            torch.cuda.empty_cache()
+
+        # Calculate NLL and ECE
+        return total_nll / total_samples, total_ece / total_samples
+            
 
     # This function probably should live outside of this class, but whatever
     def set_temperature(self, valid_loader):
@@ -36,65 +92,36 @@ class ModelWithTemperature(nn.Module):
         valid_loader (DataLoader): validation set loader
         """
         self.cuda()
-        nll_criterion = nn.CrossEntropyLoss().cuda()
-        ece_criterion = _ECELoss().cuda()
-
-        with torch.no_grad():
-
-            logits = None
-            labels = None
-
-            for step, (input, label, filename , dummy) in enumerate(valid_loader):
-
-                print (step, filename[0].split("leftImg8bit/")[1])
-                allocated = torch.cuda.memory_allocated()
-                reserved = torch.cuda.memory_reserved()
-                print(f"Memory Allocated: {allocated / (1024 ** 2):.2f} MB")
-                print(f"Memory Reserved: {reserved / (1024 ** 2):.2f} MB")
-                
-                input = input.cuda()
-
-                batch_logits = self.model(input)
-
-                # batch_logits = batch_logits.cpu()
-
-                # Concatenate progressively
-                if logits is None:
-                    logits = batch_logits
-                    labels = label
-                else:
-                    logits = torch.cat((logits, batch_logits), dim=0)
-                    labels = torch.cat((labels, label), dim=0)
-
-                print(logits.shape)
-                print(f"Memory size: {logits.element_size() * logits.nelement() / (1024 ** 2):.2f} MB")
-
-                # Libera la memoria non necessaria
-                del input, label, batch_logits
-                torch.cuda.empty_cache()
-
-        # Calculate NLL and ECE before temperature scaling
-        before_temperature_nll = nll_criterion(logits, labels).item()
-        before_temperature_ece = ece_criterion(logits, labels).item()
+        
+        before_temperature_nll, before_temperature_ece = self.get_nll_ece(valid_loader)
+         
         print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_temperature_nll, before_temperature_ece))
 
         # Next: optimize the temperature w.r.t. NLL
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
 
+        print(f"Requires grad: {self.temperature.requires_grad}")
+
+        print(f"Temperature before optimization: {self.temperature.item()}")
+
         def eval():
             optimizer.zero_grad()
-            loss = nll_criterion(self.temperature_scale(logits), labels)
-            loss.backward()
-            return loss
+            # Calcoliamo la NLL per il dataset con temperature scaling
+            nll, _ = self.get_nll_ece(valid_loader, temperature_scale=True, compute_gradients=True)
+            print(f"Current NLL: {nll}")  # Debug per verificare il valore della loss
+            nll.backward()
+            print(f"Gradients: {self.temperature.grad}")  # Debug per verificare il valore del gradiente    
+            return nll
         optimizer.step(eval)
+        print(f"Temperature after backward: {self.temperature.item()}")    
 
         # Calculate NLL and ECE after temperature scaling
-        after_temperature_nll = nll_criterion(self.temperature_scale(logits), labels).item()
-        after_temperature_ece = ece_criterion(self.temperature_scale(logits), labels).item()
+        after_temperature_nll, after_temperature_ece = self.get_nll_ece(valid_loader, temperature_scale=True)
         print('Optimal temperature: %.3f' % self.temperature.item())
         print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll, after_temperature_ece))
 
         return self
+
 
 
 class _ECELoss(nn.Module):

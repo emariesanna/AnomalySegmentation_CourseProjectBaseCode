@@ -7,6 +7,7 @@ import torch
 
 class iouEval:
 
+    # the ignoreIndex is the class that will be ignored for the evaluation (20th class in the case of Cityscapes)
     def __init__(self, nClasses, ignoreIndex=19):
         self.nClasses = nClasses
         self.ignoreIndex = ignoreIndex if nClasses>ignoreIndex else -1 #if ignoreIndex is larger than nClasses, consider no ignoreIndex
@@ -51,11 +52,6 @@ class iouEval:
             y_onehot = y_onehot[:, :self.ignoreIndex]
         else:
             ignores=0
-
-        #print(type(x_onehot))
-        #print(type(y_onehot))
-        #print(x_onehot.size())
-        #print(y_onehot.size())
 
         tpmult = x_onehot * y_onehot    #times prediction and gt coincide is 1
         tp = torch.sum(torch.sum(torch.sum(tpmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()

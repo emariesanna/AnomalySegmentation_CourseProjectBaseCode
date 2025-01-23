@@ -39,39 +39,17 @@ class ModelWithTemperature(nn.Module):
         nll_criterion = nn.CrossEntropyLoss().cuda()
         ece_criterion = _ECELoss().cuda()
 
+        # First: collect all the logits and labels for the validation set
+        logits_list = []
+        labels_list = []
         with torch.no_grad():
-
-            logits = None
-            labels = None
-
-            for step, (input, label, filename , dummy) in enumerate(valid_loader):
-
-                print (step, filename[0].split("leftImg8bit/")[1])
-                allocated = torch.cuda.memory_allocated()
-                reserved = torch.cuda.memory_reserved()
-                print(f"Memory Allocated: {allocated / (1024 ** 2):.2f} MB")
-                print(f"Memory Reserved: {reserved / (1024 ** 2):.2f} MB")
-                
+            for input, label in valid_loader:
                 input = input.cuda()
-
-                batch_logits = self.model(input)
-
-                # batch_logits = batch_logits.cpu()
-
-                # Concatenate progressively
-                if logits is None:
-                    logits = batch_logits
-                    labels = label
-                else:
-                    logits = torch.cat((logits, batch_logits), dim=0)
-                    labels = torch.cat((labels, label), dim=0)
-
-                print(logits.shape)
-                print(f"Memory size: {logits.element_size() * logits.nelement() / (1024 ** 2):.2f} MB")
-
-                # Libera la memoria non necessaria
-                del input, label, batch_logits
-                torch.cuda.empty_cache()
+                logits = self.model(input)
+                logits_list.append(logits)
+                labels_list.append(label)
+            logits = torch.cat(logits_list).cuda()
+            labels = torch.cat(labels_list).cuda()
 
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()

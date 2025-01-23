@@ -1,3 +1,4 @@
+import os
 import glob
 import torch
 from PIL import Image
@@ -10,8 +11,7 @@ import torch.nn.functional as F
 # *********************************************************************************************************************
 
 def get_anomaly_score(result, method='MSP'):
-    global msp_printed, max_entropy_printed, max_logit_printed
-
+    
     if method == 'MSP':
         probabilities = F.softmax(result, dim=1)
         retval = 1 - np.max(probabilities.squeeze(0).data.cpu().numpy(), axis=0)
@@ -19,17 +19,17 @@ def get_anomaly_score(result, method='MSP'):
 
     elif method == 'MaxEntropy':
         probabilities = F.softmax(result, dim=1)
-        entropy = -np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
+        entropy = - np.sum(probabilities.squeeze(0).data.cpu().numpy() * np.log(probabilities.squeeze(0).data.cpu().numpy() + 1e-10), axis=0)
         return entropy
 
     elif method == 'MaxLogit':
-        retval = np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
+        retval = - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)
         return retval
     
 # ********************************************************************************************************************
 
 
-def main(dataset_dir, dataset_name, model, method, file):
+def main(dataset_dir, model, method):
 
     # crea due liste vuote dove salvare i risultati
     ood_gts_list = []
@@ -128,12 +128,12 @@ def main(dataset_dir, dataset_name, model, method, file):
     print("Calculating AUPRC and FPR@TPR95...")
 
     # calculates the AUPRC score and the FPR@TPR95 score
+    # both metrics work on anomaly scores and labels because they elaborate the right threshold and separate the two classes
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
 
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
 
-    file.write(method + " " + dataset_name + '\tAUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0) )
-    file.write("\n")
+    return prc_auc, fpr
 

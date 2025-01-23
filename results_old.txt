@@ -1,0 +1,121 @@
+AUPRC score:0.24238913100550918	FPR@TPR95:96.528560727729
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6454267222394368	FPR@TPR95:96.46038434517213
+Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:8.707947864366476	FPR@TPR95:93.76600321683708
+Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:13.195203530364644	FPR@TPR95:97.01407885690608
+Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:1.1524254864666432	FPR@TPR95:86.81986970701088
+Dataset LostFound using method: MaxLogit
+AUPRC score:0.2139862097739031	FPR@TPR95:96.4412724550067
+Dataset FSstatic using method: MaxEntropy
+AUPRC score:1.9530790659364263	FPR@TPR95:94.05109312826309
+Dataset RoadAnomaly using method: MaxEntropy
+AUPRC score:9.107272084343379	FPR@TPR95:95.31263823613396
+Dataset RoadAnomaly21 using method: MaxEntropy
+AUPRC score:14.311487340581836	FPR@TPR95:96.71431356016413
+Dataset RoadObsticle21 using method: MaxEntropy
+AUPRC score:0.8319767191457978	FPR@TPR95:94.08634771715947
+Dataset LostFound using method: MaxEntropy
+AUPRC score:0.22783666017555604	FPR@TPR95:96.82960828114292
+Dataset FSstatic using method: MSP
+AUPRC score:1.9819857427174408	FPR@TPR95:95.25757918913756
+Dataset RoadAnomaly using method: MSP
+AUPRC score:9.427446360466773	FPR@TPR95:95.30083543687559
+Dataset RoadAnomaly21 using method: MSP
+AUPRC score:14.586785695331525	FPR@TPR95:95.08932282894196
+Dataset RoadObsticle21 using method: MSP
+AUPRC score:0.7209437785936255	FPR@TPR95:94.76943578101411
+Dataset LostFound using method: MSP
+AUPRC score:0.2571091357361614	FPR@TPR95:95.82849988427009
+Temperature Scaling: 0.5	Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6454267222394368	FPR@TPR95:96.46038434517213
+Temperature Scaling: 0.5	Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:8.707947864366476	FPR@TPR95:93.76600321683708
+Temperature Scaling: 0.5	Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:13.195203530364644	FPR@TPR95:97.01407885690608
+Temperature Scaling: 0.5	Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:1.1524254864666432	FPR@TPR95:86.81986970701088
+Temperature Scaling: 0.5	Dataset LostFound using method: MaxLogit
+AUPRC score:0.2139862097739031	FPR@TPR95:96.4412724550067
+Temperature Scaling: 0.5	Dataset FSstatic using method: MaxEntropy
+AUPRC score:1.9698802651428582	FPR@TPR95:94.55802416603912
+Temperature Scaling: 0.5	Dataset RoadAnomaly using method: MaxEntropy
+AUPRC score:9.160046170424993	FPR@TPR95:95.39754768353468
+Temperature Scaling: 0.5	Dataset RoadAnomaly21 using method: MaxEntropy
+AUPRC score:14.42872633870811	FPR@TPR95:95.36144014333496
+Temperature Scaling: 0.5	Dataset RoadObsticle21 using method: MaxEntropy
+AUPRC score:0.7867882638015392	FPR@TPR95:94.37115231425884
+Temperature Scaling: 0.5	Dataset LostFound using method: MaxEntropy
+AUPRC score:0.23248698255705783	FPR@TPR95:97.0848539521695
+Temperature Scaling: 0.5	Dataset FSstatic using method: MSP
+AUPRC score:2.017187894335724	FPR@TPR95:95.18257345248745
+Temperature Scaling: 0.5	Dataset RoadAnomaly using method: MSP
+AUPRC score:9.606562139343024	FPR@TPR95:95.17174664836416
+Temperature Scaling: 0.5	Dataset RoadAnomaly21 using method: MSP
+AUPRC score:14.676155373902503	FPR@TPR95:95.05198826258577
+Temperature Scaling: 0.5	Dataset RoadObsticle21 using method: MSP
+AUPRC score:0.6990968058303954	FPR@TPR95:94.88646332106808
+Temperature Scaling: 0.5	Dataset LostFound using method: MSP
+AUPRC score:0.26836044041636403	FPR@TPR95:95.4058605439693
+Temperature Scaling: 0.75	Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6454267279869796	FPR@TPR95:96.46038434517213
+Temperature Scaling: 0.75	Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:8.70794787452754	FPR@TPR95:93.76600321683708
+Temperature Scaling: 0.75	Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:13.195203538285766	FPR@TPR95:97.01407885690608
+Temperature Scaling: 0.75	Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:1.152425482047958	FPR@TPR95:86.81986970701088
+Temperature Scaling: 0.75	Dataset LostFound using method: MaxLogit
+AUPRC score:0.21398621061794812	FPR@TPR95:96.44127293004308
+Temperature Scaling: 0.75	Dataset FSstatic using method: MaxEntropy
+AUPRC score:1.9730640825749677	FPR@TPR95:95.10988052614864
+Temperature Scaling: 0.75	Dataset RoadAnomaly using method: MaxEntropy
+AUPRC score:9.207207927569852	FPR@TPR95:95.41110504151919
+Temperature Scaling: 0.75	Dataset RoadAnomaly21 using method: MaxEntropy
+AUPRC score:14.474432913766517	FPR@TPR95:95.21936490726395
+Temperature Scaling: 0.75	Dataset RoadObsticle21 using method: MaxEntropy
+AUPRC score:0.767427210381701	FPR@TPR95:94.49053412734358
+Temperature Scaling: 0.75	Dataset LostFound using method: MaxEntropy
+AUPRC score:0.2380968544937701	FPR@TPR95:96.79033631009963
+Temperature Scaling: 0.75	Dataset FSstatic using method: MSP
+AUPRC score:2.029911989574861	FPR@TPR95:95.149515968694
+Temperature Scaling: 0.75	Dataset RoadAnomaly using method: MSP
+AUPRC score:9.660775706029938	FPR@TPR95:95.13202964370643
+Temperature Scaling: 0.75	Dataset RoadAnomaly21 using method: MSP
+AUPRC score:14.703785884857176	FPR@TPR95:95.04172034938395
+Temperature Scaling: 0.75	Dataset RoadObsticle21 using method: MSP
+AUPRC score:0.6935190258875399	FPR@TPR95:94.91459856278315
+Temperature Scaling: 0.75	Dataset LostFound using method: MSP
+AUPRC score:0.27161235368470904	FPR@TPR95:95.30358277059318
+Temperature Scaling: 1.1	Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6454267305981825	FPR@TPR95:96.46038434517213
+Temperature Scaling: 1.1	Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:8.707947881568908	FPR@TPR95:93.76600321683708
+Temperature Scaling: 1.1	Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:13.195203534633984	FPR@TPR95:97.01407885690608
+Temperature Scaling: 1.1	Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:1.1524254781014214	FPR@TPR95:86.81986970701088
+Temperature Scaling: 1.1	Dataset LostFound using method: MaxLogit
+AUPRC score:0.21398621118653852	FPR@TPR95:96.44127293004308
+Temperature Scaling: 1.1	Dataset FSstatic using method: MaxEntropy
+AUPRC score:1.9719385909237144	FPR@TPR95:94.98340019171349
+Temperature Scaling: 1.1	Dataset RoadAnomaly using method: MaxEntropy
+AUPRC score:9.189207797711232	FPR@TPR95:95.40741786259115
+Temperature Scaling: 1.1	Dataset RoadAnomaly21 using method: MaxEntropy
+AUPRC score:14.459388799439152	FPR@TPR95:95.25560864969376
+Temperature Scaling: 1.1	Dataset RoadObsticle21 using method: MaxEntropy
+AUPRC score:0.7738246718121798	FPR@TPR95:94.44960396284871
+Temperature Scaling: 1.1	Dataset LostFound using method: MaxEntropy
+AUPRC score:0.2360579898793137	FPR@TPR95:96.9049215518854
+Temperature Scaling: 1.1	Dataset FSstatic using method: MSP
+AUPRC score:2.0258437206499234	FPR@TPR95:95.15829866169616
+Temperature Scaling: 1.1	Dataset RoadAnomaly using method: MSP
+AUPRC score:9.644062518002688	FPR@TPR95:95.14409947437267
+Temperature Scaling: 1.1	Dataset RoadAnomaly21 using method: MSP
+AUPRC score:14.695269294485842	FPR@TPR95:95.0452068470882
+Temperature Scaling: 1.1	Dataset RoadObsticle21 using method: MSP
+AUPRC score:0.6951597188674615	FPR@TPR95:94.90675747116751
+Temperature Scaling: 1.1	Dataset LostFound using method: MSP
+AUPRC score:0.27060612544359186	FPR@TPR95:95.33356755642215

@@ -1,13 +1,10 @@
 import os
-import glob
 import random
-from PIL import Image
 import numpy as np
 import torch
 from erfnet import ERFNet
-import os.path as osp
 from argparse import ArgumentParser
-from temperature_scaling import ModelWithTemperature
+from temperature_scaling3 import ModelWithTemperature
 from enet_pytorch_cityscapes import cityscapes_enet_pytorch as ENet
 from evalAnomaly import main as evalAnomaly
 from eval_iou import main as eval_iou
@@ -27,7 +24,7 @@ torch.backends.cudnn.benchmark = True
 # numero delle classi del dataset
 NUM_CLASSES = 20
 # flag per passare da valutazione di Anomaly Detection (0) a valutazione di IOU (1) a entrambe (2)
-IOU = 2
+IOU = 0
 # modello da utilizzare (erfnet o enet)
 MODEL = "erfnet"
 DatasetDir = {
@@ -103,14 +100,15 @@ def main():
     parser.add_argument('--num-workers', type=int, default=4)
     # dimensione del batch per l'elaborazione delle immagini 
     # (quante immagini alla volta vengono elaborate, maggiore è più veloce ma richiede più memoria)
-    parser.add_argument('--batch-size', type=int, default=1)
+    parser.add_argument('--batch-size', type=int, default=20)
     # flag per forzare l'utilizzo della cpu (action='store_true' rende l'argomento opzionale e false di default)
     parser.add_argument('--cpu', action='store_true')
     # quale metodo utilizzare per l'anomaly detection
     parser.add_argument('--methods', default=["MaxLogit", "MaxEntropy", "MSP"],
                         nargs="+", help="A list of space separated method names between MSP, MaxEntropy and MaxLogit")
     # quale temperatura utilizzare per il temperature scaling
-    parser.add_argument('--temperature', default=0 , help="Set 0 to disable temperature scaling")
+    parser.add_argument('--temperatures', default=[0, 0.5, 0.75, 1.1] , 
+                        nargs="+", help="Set 0 to disable temperature scaling, set n to use learned temperature")	
     # costruisce un oggetto contenente gli argomenti passati da riga di comando (tipo Namespace)
     args = parser.parse_args()
     # inizializza due liste vuote per contenere i risultati
@@ -140,9 +138,6 @@ def main():
 
     print ("Model and weights LOADED successfully")
 
-    if args.temperature != 0:
-        model = ModelWithTemperature(model, args.temperature)
-
     # imposta il modello in modalità di valutazione
     # questo cambia alcuni comportamenti come la batch normalization 
     # (che viene calcolata su media e varianza globali invece che del batch) 
@@ -152,27 +147,41 @@ def main():
     # se non esiste il file results.txt, crea un file vuoto
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
+
+    if IOU == 1:
+        print("Evaluating IOU", "using method", method)
+        eval_iou(args.datadir, args.cpu, NUM_CLASSES, model)
     
-    # cancella il file
-    open('results.txt', 'w').close()
+    print("Evaluating Anomaly Detection")
 
-    # lo riapre in modalità append (aggiunge testo alla fine)
-    file = open('results.txt', 'a')
+    def iterate_datasets(mod):
+        for dataset in args.datasets:
+            dataset_string = "Dataset " + dataset
+            dataset_dir = DatasetDir[dataset]
+            prc_auc, fpr = evalAnomaly(dataset_dir, mod, method)
+            result_string = 'AUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0)
+            print(temperature_string + dataset_string + method_string + "\n" + result_string)
+            file = open('results.txt', 'a')
+            file.write(temperature_string + dataset_string + method_string + "\n" + result_string + "\n")
+            file.close()
+    
+    for method in args.methods:
 
-    if IOU == 1 or IOU == 2:
-        for method in args.methods:
-            print("Evaluating IOU", "using method", method)
-            eval_iou(method, args.datadir, args.cpu, NUM_CLASSES, model, file)
-    if IOU == 0 or IOU == 2:
-        print("Evaluating Anomaly Detection")
-        for method in args.methods:
-            for dataset in args.datasets:
-                print("Dataset", dataset, "using method", method)
-                dataset_dir = DatasetDir[dataset]
-                evalAnomaly(dataset_dir, dataset , model, method, file)
+        method_string = " using method: " + method
 
-    # chiude il file
-    file.close()
+        if method == "MSP":
+            for temperature in args.temperatures:
+                model_t = ModelWithTemperature(model, temperature)
+                iterate_datasets(model_t)
+                temperature_string = "Temperature Scaling: " + str(temperature) + "\t"
+        
+        temperature_string = ""
+        iterate_datasets(model)
+            
+            
+
+                
+    
 
 
 if __name__ == '__main__':
