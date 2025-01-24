@@ -172,3 +172,108 @@ Dataset RoadAnomaly21 using method: MaxLogit
 AUPRC score:13.195272903270533	FPR@TPR95:97.01553042149477
 Dataset RoadObsticle21 using method: MaxLogit
 AUPRC score:1.1524941666202686	FPR@TPR95:86.81123898719628
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Erfnet
+MEAN IoU: 72.20%
+
+
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MEAN IoU: 72.20%
+
+
+MODEL Erfnet
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Erfnet
+MEAN IoU: 0.20%
+
+
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+
+
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MODEL Erfnet
+MEAN IoU: 61.67%
+
+
+MODEL Erfnet
+MEAN IoU: 61.67%
+
+
+MODEL Erfnet
+MEAN IoU: 72.20%
+
+
+MODEL Erfnet
+MODEL Erfnet
+MEAN IoU: 72.20%
+
+
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Enet

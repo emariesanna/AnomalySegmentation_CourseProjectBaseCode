@@ -3,6 +3,7 @@
 # Eduardo Romera
 #######################
 
+import random
 from print_output import print_output
 import torch
 import time
@@ -14,10 +15,13 @@ from iouEval import iouEval, getColorEntry
 
 # verificare come utilizzare il parametro method
 
-def main(model, datadir, cpu, num_classes, ignoreIndex=19):
+def main(model, datadir, cpu, num_classes, ignoreIndex=19, model_name='erfnet', PRINT=0):
 
     # load the dataset
-    loader = get_cityscapes_loader(datadir, 10, 'val')
+    loader = get_cityscapes_loader(datadir, 10, 'val', model_name=model_name)
+
+    if PRINT != 0:
+        print_index = random.sample(range(len(loader)), PRINT)
 
     # create the IoU evaluator
     iouEvalVal = iouEval(num_classes, ignoreIndex=ignoreIndex)
@@ -48,9 +52,8 @@ def main(model, datadir, cpu, num_classes, ignoreIndex=19):
         filenameSave = filename[0].split("leftImg8bit/")[1] 
         print (step, filenameSave)
 
-        if step in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-           #print_output(out[0, :, :, :], filename[0].split("leftImg8bit/")[1])
-           pass
+        if step in print_index:
+           print_output(out[0, :, :, :], filename[0].split("leftImg8bit/")[1])
 
     # get the IoU results
     iouVal, iou_classes = iouEvalVal.getIoU()

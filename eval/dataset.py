@@ -32,17 +32,23 @@ def image_path_city(root, name):
 def image_basename(filename):
     return os.path.basename(os.path.splitext(filename)[0])
 
-def get_cityscapes_loader(datadir, batch_size, subset):
+def get_cityscapes_loader(datadir, batch_size, subset, model_name='erfnet'):
+    if model_name == 'erfnet':
+        size = 512
+    elif model_name == 'enet':
+        size = 512
 
     # preprocessign of the input images
+    # Resize the image to the given height size, width keeps the ratio of the original image
     input_transform_cityscapes = Compose([
-        Resize(512, Image.BILINEAR),
+        Resize(size, Image.BILINEAR),
         ToTensor(),
     ])
     target_transform_cityscapes = Compose([
-        Resize(512, Image.NEAREST),
+        Resize(size, Image.NEAREST),
         ToLabel(),
-        Relabel(255, 19),   #ignore label to 19
+        #transform label 255 (ignore label) to 19
+        Relabel(255, 19),
     ])
 
     return DataLoader(cityscapes(datadir, input_transform_cityscapes, target_transform_cityscapes, subset=subset), num_workers=4, batch_size=batch_size, shuffle=False)

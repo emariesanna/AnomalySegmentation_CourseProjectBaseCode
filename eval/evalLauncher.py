@@ -5,7 +5,7 @@ import torch
 from erfnet import ERFNet
 from argparse import ArgumentParser
 from temperature_scaling3 import ModelWithTemperature
-from enet2 import ENet
+from enet import ENet
 from evalAnomaly import main as evalAnomaly
 from eval_iou import main as eval_iou
 
@@ -24,13 +24,18 @@ torch.backends.cudnn.benchmark = True
 # numero delle classi del dataset
 NUM_CLASSES = 20
 # flag per attivare valutazione di IOU
-IOU = 0
+IOU = 1
 # flag per attivare valutazione di Anomaly Detection tramite anomaly scores
-ANOMALY = 1
+ANOMALY = 0
 # flag per attivare valutazione di Anomaly Detection tramite void class
 VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "erfnet"
+MODEL = "enet"
+# pesi prunati sì/no
+PRUNED = 0
+# flag per attivare la stampa di un certo numero di immagini
+PRINT = 1
+
 DatasetDir = {
     "LostFound": "./Dataset/Validation_Dataset/FS_LostFound_full/images/*.png",
     "FSstatic": "./Dataset/Validation_Dataset/fs_static/images/*.jpg",
@@ -49,24 +54,73 @@ DatasetDir = {
 def load_my_state_dict(model, state_dict):
         # recupera lo state dictionary attuale del modello
         own_state = model.state_dict()
+
+        open('keys.txt', 'w').close()
+
+        file = open('keys.txt', 'a')
+
+        file.write("Model state dict size: " + str(len(own_state.keys())))
+        file.write("\n")
+        file.write("Uploaded state dict size: " + str(len(state_dict.keys())))
+        file.write("\n")
+        for step in range(0, max(len(own_state.keys()), len(state_dict.keys()))):
+            if step < len(own_state.keys()):
+                own_str = str(list(own_state.keys())[step])
+            else:
+                own_str = ""
+            if step < len(state_dict.keys()):
+                state_str = str(list(state_dict.keys())[step])
+            else:
+                state_str = ""
+            file.write(str(step) + "\t" + own_str + "\t" + state_str + "\n") 
+        
+        not_loaded = []
+        missing = []
+
+        for name in own_state:
+            found = False
+            for name2 in state_dict:
+                if name == name2 or name == ("module." + name2) or ("module." + name) == name2:
+                    found = True
+                else:
+                    pass
+            if not found:
+                missing.append(name)
+
         # per ogni parametro nello state dictionary passato alla funzione
         # (è un dizionario quindi fatto di coppie chiave-valore)
         for name, param in state_dict.items():
-            # se il nome del parametro non è presente nello state dictionary del modello
-            if name not in own_state:
-                # se il nome del parametro ha il prefisso "module."
-                if name.startswith("module."):
-                    # rimuove il prefisso
-                    name = name.split("module.")[-1]
-                    # copia il parametro di state_dict nel modello
+            loaded = False
+            for name2 in own_state:
+                if name == name2:
                     own_state[name].copy_(param)
+                    loaded = True
+                elif name == ("module." + name2):
+                    own_state[name.split("module.")[-1]].copy_(param)
+                    loaded = True
+                elif ("module." + name) == name2:
+                    own_state[("module." + name)].copy_(param)
+                    loaded = True
                 else:
-                    print(name, " not loaded")
-                    continue
-            # se il nome del parametro è nel modello
-            else:
-                # copia il parametro di state_dict nel modello
-                own_state[name].copy_(param)
+                    pass
+            if not loaded:
+                print(name, " not loaded")
+                not_loaded.append(name)
+
+        file.write("\n")
+        file.write("Not loaded: " + str(len(not_loaded)))
+        file.write("\n")
+        for step in range(0, len(not_loaded)):
+            file.write(str(step) + "\t" + not_loaded[step] + "\n")
+        file.write("\n")
+        file.write("Missing: " + str(len(missing)))
+        file.write("\n")
+        for step in range(0, len(missing)):
+            file.write(str(step) + "\t" + missing[step] + "\n")
+        file.write("\n")
+
+        file.close()
+
         return model
     
 # ********************************************************************************************************************
@@ -76,11 +130,14 @@ def main():
 
     if MODEL == "erfnet":
         modelclass = "erfnet.py"
-        weights = "erfnet_pretrained.pth"
+        if PRUNED == 0:
+            weights = "erfnet_pretrained.pth"
+        else:
+            weights = "erfnetPruned.pth"
         Model = ERFNet
     elif MODEL == "enet":
         modelclass = "enet.py"
-        weights = "enet_model_best_giorgia.pth"
+        weights = "enet_best_model_state_dict.pth"
         Model = ENet
 
     # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
@@ -139,6 +196,7 @@ def main():
 
     # carica nel modello lo state dictionary creato
     model = load_my_state_dict(model, state_dict)
+    #model.load_state_dict(state_dict)
 
     print ("Model and weights LOADED successfully")
 
@@ -158,7 +216,7 @@ def main():
 
     if IOU == 1:
         print("Evaluating IOU")
-        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19)
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19, model_name=MODEL, PRINT=PRINT)
         file = open('results.txt', 'a')
         file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
         file.write("\n")
@@ -196,7 +254,7 @@ def main():
 
     if VOID == 1:
         print("Evaluating Void Class IoU")
-        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=-1)
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=-1, PRINT=PRINT)
         file = open('results.txt', 'a')
         file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
         file.write("\n")
