@@ -147,3 +147,28 @@ MODEL Enet
 MEAN IoU: 1.65%
 
 
+MODEL Enet
+MODEL Enet
+MODEL Enet
+MODEL Enet
+MODEL Enet
+MEAN IoU: 1.50%
+
+
+MODEL Enet
+MODEL Enet
+Dataset FSstatic using method: MaxLogit
+AUPRC score:2.5140201619257843	FPR@TPR95:90.31583948103041
+Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:11.750909033901173	FPR@TPR95:94.02292741161527
+Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:18.039992472793227	FPR@TPR95:92.10737949044804
+MODEL Erfnet
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6454214011672352	FPR@TPR95:96.4598613965297
+Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:8.707945633861748	FPR@TPR95:93.76549498795245
+Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:13.195272903270533	FPR@TPR95:97.01553042149477
+Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:1.1524941666202686	FPR@TPR95:86.81123898719628

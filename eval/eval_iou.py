@@ -49,7 +49,8 @@ def main(model, datadir, cpu, num_classes, ignoreIndex=19):
         print (step, filenameSave)
 
         if step in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-           print_output(out[0, :, :, :], filename[0].split("leftImg8bit/")[1])
+           #print_output(out[0, :, :, :], filename[0].split("leftImg8bit/")[1])
+           pass
 
     # get the IoU results
     iouVal, iou_classes = iouEvalVal.getIoU()

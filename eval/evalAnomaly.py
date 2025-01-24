@@ -1,5 +1,6 @@
 import os
 import glob
+from print_output import print_output
 import torch
 from PIL import Image
 import numpy as np
@@ -39,7 +40,7 @@ def main(dataset_dir, model, method):
     anomaly_score_list = []
 
     # for each path in the input path list (glob.glob returns a list of paths expanding the * wildcard)
-    for path in glob.glob(dataset_dir):
+    for step, path in enumerate(glob.glob(dataset_dir)):
         
         # print(path)
 
@@ -55,6 +56,9 @@ def main(dataset_dir, model, method):
             # result size is 1 x 20 x H x W
             # the model returns for each pixel the logits for each class
             result = model(image)
+            if step == 0:
+                print(result.size())
+                print_output(result[0, :, :, :], "output")
         
         # calculates the anomaly score using the method specified
         # anomaly_result size is H x W

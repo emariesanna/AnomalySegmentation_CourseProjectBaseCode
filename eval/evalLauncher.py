@@ -5,7 +5,7 @@ import torch
 from erfnet import ERFNet
 from argparse import ArgumentParser
 from temperature_scaling3 import ModelWithTemperature
-from enet import ENet
+from enet2 import ENet
 from evalAnomaly import main as evalAnomaly
 from eval_iou import main as eval_iou
 
@@ -24,13 +24,13 @@ torch.backends.cudnn.benchmark = True
 # numero delle classi del dataset
 NUM_CLASSES = 20
 # flag per attivare valutazione di IOU
-IOU = 1
+IOU = 0
 # flag per attivare valutazione di Anomaly Detection tramite anomaly scores
-ANOMALY = 0
+ANOMALY = 1
 # flag per attivare valutazione di Anomaly Detection tramite void class
 VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "enet"
+MODEL = "erfnet"
 DatasetDir = {
     "LostFound": "./Dataset/Validation_Dataset/FS_LostFound_full/images/*.png",
     "FSstatic": "./Dataset/Validation_Dataset/fs_static/images/*.jpg",
@@ -80,7 +80,7 @@ def main():
         Model = ERFNet
     elif MODEL == "enet":
         modelclass = "enet.py"
-        weights = "enet_best_model.pth"
+        weights = "enet_model_best_giorgia.pth"
         Model = ENet
 
     # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
