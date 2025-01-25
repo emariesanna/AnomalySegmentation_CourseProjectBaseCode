@@ -631,8 +631,3 @@ Uploaded state dict size: 631
 628	module.bottleneck51.bn3.running_var	module.bottleneck51.bn3.running_var
 629	module.bottleneck51.bn3.num_batches_tracked	module.bottleneck51.bn3.num_batches_tracked
 630	module.fullconv.weight	module.fullconv.weight
-
-Not loaded: 0
-
-Missing: 0
-
