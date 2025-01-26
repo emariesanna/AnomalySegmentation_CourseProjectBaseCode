@@ -1,6 +1,7 @@
 import os
 import random
 import numpy as np
+from bisenetv2 import BiSeNetV2
 from state_dictionary import load_my_state_dict
 import torch
 from erfnet import ERFNet
@@ -23,7 +24,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
 
 # numero delle classi del dataset
-NUM_CLASSES = 20
+NUM_CLASSES = 19
 # flag per attivare valutazione di IOU
 IOU = 1
 # flag per attivare valutazione di Anomaly Detection tramite anomaly scores
@@ -31,7 +32,7 @@ ANOMALY = 0
 # flag per attivare valutazione di Anomaly Detection tramite void class
 VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "enet"
+MODEL = "bisenetv2"
 # pesi prunati sì/no
 PRUNED = 0
 # flag per attivare la stampa di un certo numero di immagini
@@ -60,6 +61,10 @@ def main():
         modelclass = "enet.py"
         weights = "checkpoint-epoch70-state-dict.pth"
         Model = ENet
+    elif MODEL == "bisenetv2":
+        modelclass = "bisenetv2.py"
+        weights = "bisenetv2_pretrained.pth"
+        Model = BiSeNetV2
 
     # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
     parser = ArgumentParser()
@@ -137,7 +142,7 @@ def main():
 
     if IOU == 1:
         print("Evaluating IOU")
-        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19, model_name=MODEL, PRINT=PRINT)
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19, PRINT=PRINT)
         file = open('results.txt', 'a')
         file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
         file.write("\n")

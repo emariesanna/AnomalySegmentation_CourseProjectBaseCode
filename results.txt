@@ -279,3 +279,5 @@ MEAN IoU: 1.50%
 MODEL Enet
 MODEL Enet
 MODEL Enet
+MODEL Bisenetv2
+MODEL Bisenetv2

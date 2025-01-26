@@ -15,10 +15,10 @@ from iouEval import iouEval, getColorEntry
 
 # verificare come utilizzare il parametro method
 
-def main(model, datadir, cpu, num_classes, ignoreIndex=19, model_name='erfnet', PRINT=0):
+def main(model, datadir, cpu, num_classes, ignoreIndex=19, PRINT=0):
 
     # load the dataset
-    loader = get_cityscapes_loader(datadir, 10, 'val', model_name=model_name)
+    loader = get_cityscapes_loader(datadir, 10, 'val')
 
     if PRINT != 0:
         print_index = random.sample(range(len(loader)), PRINT)

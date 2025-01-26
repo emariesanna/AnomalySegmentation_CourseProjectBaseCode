@@ -32,11 +32,9 @@ def image_path_city(root, name):
 def image_basename(filename):
     return os.path.basename(os.path.splitext(filename)[0])
 
-def get_cityscapes_loader(datadir, batch_size, subset, model_name='erfnet'):
-    if model_name == 'erfnet':
-        size = 512
-    elif model_name == 'enet':
-        size = 512
+def get_cityscapes_loader(datadir, batch_size, subset):
+    
+    size = 1024
 
     # preprocessign of the input images
     # Resize the image to the given height size, width keeps the ratio of the original image
