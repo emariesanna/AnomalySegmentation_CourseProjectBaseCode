@@ -281,3 +281,5 @@ MODEL Enet
 MODEL Enet
 MODEL Bisenetv2
 MODEL Bisenetv2
+MODEL Enet
+MODEL Enet

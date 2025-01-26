@@ -66,9 +66,9 @@ def load_my_state_dict(model, state_dict):
             loaded = False
             for name2 in own_state:
                 if name == name2:
-                    print(name, name2)
-                    print(param.size(), own_state[name2].size())
-                    print("\n")
+                    #print(name, name2)
+                    #print(param.size(), own_state[name2].size())
+                    #print("\n")
                     own_state[name].copy_(param)
                     loaded = True
                 elif name == ("module." + name2):

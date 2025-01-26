@@ -32,7 +32,7 @@ ANOMALY = 0
 # flag per attivare valutazione di Anomaly Detection tramite void class
 VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "bisenetv2"
+MODEL = "enet"
 # pesi prunati sì/no
 PRUNED = 0
 # flag per attivare la stampa di un certo numero di immagini
@@ -59,7 +59,7 @@ def main():
         Model = ERFNet
     elif MODEL == "enet":
         modelclass = "enet.py"
-        weights = "checkpoint-epoch70-state-dict.pth"
+        weights = "enet_best_model_19_state_dict.pth"
         Model = ENet
     elif MODEL == "bisenetv2":
         modelclass = "bisenetv2.py"
