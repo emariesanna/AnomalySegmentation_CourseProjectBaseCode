@@ -1,5 +1,6 @@
 import os
 import glob
+import random
 from print_output import print_output
 import torch
 from PIL import Image
@@ -7,6 +8,7 @@ import numpy as np
 from ood_metrics import fpr_at_95_tpr
 from sklearn.metrics import average_precision_score
 import torch.nn.functional as F
+from torchvision.transforms import Compose, Resize, ToTensor
 
 
 # *********************************************************************************************************************
@@ -32,33 +34,38 @@ def get_anomaly_score(result, method='MSP'):
     
 # ********************************************************************************************************************
 
-
-def main(dataset_dir, model, method):
+input_transform = Compose([Resize((1024,2048), Image.BILINEAR), ToTensor()])
+target_transform = Compose([Resize((1024,2048), Image.NEAREST)])
+def main(dataset_dir, model, method, PRINT=0):
 
     # crea due liste vuote dove salvare i risultati
     ood_gts_list = []
     anomaly_score_list = []
 
-    # for each path in the input path list (glob.glob returns a list of paths expanding the * wildcard)
-    for step, path in enumerate(glob.glob(dataset_dir)):
-        
-        # print(path)
+    path_list = glob.glob(dataset_dir)
 
+    if PRINT != 0:
+        print_index = random.sample(range(len(path_list)), PRINT)
+
+    # for each path in the input path list (glob.glob returns a list of paths expanding the * wildcard)
+    for step, path in enumerate(path_list):
+        
+        
         # load the image, converting it to an RGB tensor (dimensions are W x H x 3)
         image = Image.open(path).convert('RGB')
         # converts the tensor to a numpy tensor and loads it on the gpu, adding a dimension and converting it to float (dimensions are 1 x H x W x 3)
         image = torch.from_numpy(np.array(image)).unsqueeze(0).float()
         # permutes the dimensions of the tensor (dimensions are 1 x 3 x H x W)
         image = image.permute(0,3,1,2)
-
+        
+        image = input_transform(Image.open(path).convert('RGB')).unsqueeze(0).float().to('cuda')
         # launches the model with the image as input while disabling gradient computation (saves memory and computation time)
         with torch.no_grad():
             # result size is 1 x 20 x H x W
             # the model returns for each pixel the logits for each class
             result = model(image)
-            if step == 0:
-                print(result.size())
-                print_output(result[0, :, :, :], "output")
+            if step in print_index:
+                print_output(result[0, :, :, :], path[0])
         
         # calculates the anomaly score using the method specified
         # anomaly_result size is H x W
@@ -78,7 +85,7 @@ def main(dataset_dir, model, method):
            pathGT = pathGT.replace("jpg", "png")
 
         # opens the ground truth mask image and converts it to a numpy tensor
-        mask = Image.open(pathGT)
+        mask = target_transform(Image.open(pathGT))
         # ood_gts stands for out-of-distribution ground truths
         # the ground truth mask highlights the pixels that are not part of any class
         ood_gts = np.array(mask)

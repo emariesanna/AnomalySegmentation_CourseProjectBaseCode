@@ -283,3 +283,75 @@ MODEL Bisenetv2
 MODEL Bisenetv2
 MODEL Enet
 MODEL Enet
+MODEL Enet
+MODEL Enet
+MEAN IoU: 9.05%
+
+
+MODEL Enet
+MODEL Enet
+MEAN IoU: 7.73%
+
+
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv2
+MODEL Bisenetv1
+MODEL Bisenetv1
+MEAN IoU: 74.25%
+
+
+MODEL Bisenetv1
+MEAN IoU: 68.99%
+
+
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772487005763164	FPR@TPR95:93.80547286672252
+MODEL Bisenetv1
+MODEL Bisenetv1
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772487420622915	FPR@TPR95:93.80461290673276
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772343515577708	FPR@TPR95:93.80533631902145
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772448641066775	FPR@TPR95:93.80529273996791
+MODEL Bisenetv1
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772561359042517	FPR@TPR95:93.80543219293924
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772533818566717	FPR@TPR95:93.80496676864746
+Dataset FSstatic using method: MaxLogit
+AUPRC score:1.6772533818566717	FPR@TPR95:93.80496676864746
+MODEL Bisenetv1
+MODEL Bisenetv1
+Dataset FSstatic using method: MaxLogit
+AUPRC score:4.190437213233926	FPR@TPR95:75.59705424191824
+MODEL Bisenetv1
+MODEL Bisenetv1
+MODEL Bisenetv1
+MODEL Bisenetv1
+Dataset RoadAnomaly21 using method: MaxLogit
+AUPRC score:21.560820599734914	FPR@TPR95:92.70571070445754
+Dataset FSstatic using method: MaxLogit
+AUPRC score:4.190137187044694	FPR@TPR95:75.59673117586803
+Dataset RoadObsticle21 using method: MaxLogit
+AUPRC score:12.89937613594127	FPR@TPR95:70.64658194315577
+Dataset LostFound using method: MaxLogit
+AUPRC score:0.4688507636556689	FPR@TPR95:82.90031311132172
+Dataset RoadAnomaly using method: MaxLogit
+AUPRC score:10.107316542437776	FPR@TPR95:91.417575619299
+Dataset RoadAnomaly21 using method: MaxEntropy
+AUPRC score:27.326215576442493	FPR@TPR95:99.74467867954765
+Dataset FSstatic using method: MaxEntropy
+AUPRC score:8.979116348201883	FPR@TPR95:53.98241835043055

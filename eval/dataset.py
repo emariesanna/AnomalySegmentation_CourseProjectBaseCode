@@ -32,7 +32,7 @@ def image_path_city(root, name):
 def image_basename(filename):
     return os.path.basename(os.path.splitext(filename)[0])
 
-def get_cityscapes_loader(datadir, batch_size, subset):
+def get_cityscapes_loader(datadir, batch_size=1, subset="val"):
     
     size = 1024
 

@@ -2,6 +2,7 @@ import os
 import random
 import numpy as np
 from bisenetv2 import BiSeNetV2
+from bisenetv1 import BiSeNetV1
 from state_dictionary import load_my_state_dict
 import torch
 from erfnet import ERFNet
@@ -24,15 +25,15 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
 
 # numero delle classi del dataset
-NUM_CLASSES = 19
+NUM_CLASSES = 20
 # flag per attivare valutazione di IOU
-IOU = 1
+IOU = 0
 # flag per attivare valutazione di Anomaly Detection tramite anomaly scores
-ANOMALY = 0
+ANOMALY = 1
 # flag per attivare valutazione di Anomaly Detection tramite void class
 VOID = 0
 # modello da utilizzare (erfnet o enet)
-MODEL = "enet"
+MODEL = "bisenetv1"
 # pesi prunati sì/no
 PRUNED = 0
 # flag per attivare la stampa di un certo numero di immagini
@@ -56,22 +57,26 @@ def main():
             weights = "erfnet_pretrained.pth"
         else:
             weights = "erfnetPruned.pth"
-        Model = ERFNet
+        model = ERFNet(NUM_CLASSES)
     elif MODEL == "enet":
         modelclass = "enet.py"
-        weights = "enet_best_model_19_state_dict.pth"
-        Model = ENet
+        weights = "enet_20.pth"
+        model = ENet(NUM_CLASSES)
     elif MODEL == "bisenetv2":
         modelclass = "bisenetv2.py"
-        weights = "bisenetv2_pretrained.pth"
-        Model = BiSeNetV2
+        weights = "bisenetv2_19.pth"
+        model = BiSeNetV2(NUM_CLASSES, aux_mode="eval")
+    elif MODEL == "bisenetv1":
+        modelclass = "bisenetv1.py"
+        weights = "bisenetv1_20.pth"
+        model = BiSeNetV1(NUM_CLASSES, aux_mode="eval")
 
     # definisce un parser, ovvero un oggetto che permette di leggere gli argomenti passati da riga di comando
     parser = ArgumentParser()
     # definisce gli argomenti accettati dal parser
     # nomi dei dataset da utilizzare
     parser.add_argument("--datasets",
-                        default=["FSstatic","RoadAnomaly","RoadAnomaly21","RoadObsticle21","LostFound"],
+                        default=["RoadAnomaly21","FSstatic","RoadObsticle21","LostFound","RoadAnomaly"],
                         nargs="+", help="A list of space separated dataset names")
     # directory per la cartella contentente il modello pre-addestrato
     parser.add_argument('--loadDir', default="./trained_models/")
@@ -87,7 +92,7 @@ def main():
     parser.add_argument('--num-workers', type=int, default=4)
     # dimensione del batch per l'elaborazione delle immagini 
     # (quante immagini alla volta vengono elaborate, maggiore è più veloce ma richiede più memoria)
-    parser.add_argument('--batch-size', type=int, default=20)
+    parser.add_argument('--batch-size', type=int, default=10)
     # flag per forzare l'utilizzo della cpu (action='store_true' rende l'argomento opzionale e false di default)
     parser.add_argument('--cpu', action='store_true')
     # quale metodo utilizzare per l'anomaly detection
@@ -107,9 +112,6 @@ def main():
     print ("Loading model: " + modelpath)
     print ("Loading weights: " + weightspath)
 
-    # crea un modello ERFNet con NUM_CLASSES classi
-    model = Model(NUM_CLASSES)
-
     # se l'argomento cpu non è stato passato, allora imposta torch per usare la gpu
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
@@ -125,6 +127,8 @@ def main():
     #model.load_state_dict(state_dict)
 
     print ("Model and weights LOADED successfully")
+
+    
 
     # imposta il modello in modalità di valutazione
     # questo cambia alcuni comportamenti come la batch normalization 
@@ -142,7 +146,7 @@ def main():
 
     if IOU == 1:
         print("Evaluating IOU")
-        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=19, PRINT=PRINT)
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, batch_size=args.batch_size , ignoreIndex=19, PRINT=PRINT)
         file = open('results.txt', 'a')
         file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
         file.write("\n")
@@ -155,7 +159,7 @@ def main():
             for dataset in args.datasets:
                 dataset_string = "Dataset " + dataset
                 dataset_dir = DatasetDir[dataset]
-                prc_auc, fpr = evalAnomaly(dataset_dir, mod, method)
+                prc_auc, fpr = evalAnomaly(dataset_dir, mod, method, PRINT=PRINT)
                 result_string = 'AUPRC score:' + str(prc_auc*100.0) + '\tFPR@TPR95:' + str(fpr*100.0)
                 print(temperature_string + dataset_string + method_string + "\n" + result_string)
                 file = open('results.txt', 'a')
@@ -180,7 +184,7 @@ def main():
 
     if VOID == 1:
         print("Evaluating Void Class IoU")
-        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, ignoreIndex=-1, PRINT=PRINT)
+        iou = eval_iou(model, args.datadir, cpu=False, num_classes=NUM_CLASSES, batch_size=args.batch_size, ignoreIndex=-1, PRINT=PRINT)
         file = open('results.txt', 'a')
         file.write("MEAN IoU: " + '{:0.2f}'.format(iou*100) + "%")
         file.write("\n")

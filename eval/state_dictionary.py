@@ -4,7 +4,7 @@ import torch
 def extract_state_dictionary():
 
     # Carica il file .pth
-    file_path = "./trained_models/checkpoint-epoch70.pth"
+    file_path = "./trained_models/bisenetv1_20.pth"
     data = torch.load(file_path)
 
     # Accedi al dizionario desiderato
@@ -36,6 +36,8 @@ def load_my_state_dict(model, state_dict):
         file.write("\n")
         file.write("Uploaded state dict size: " + str(len(state_dict.keys())))
         file.write("\n")
+
+        """
         for step in range(0, max(len(own_state.keys()), len(state_dict.keys()))):
             if step < len(own_state.keys()):
                 own_str = str(list(own_state.keys())[step])
@@ -45,7 +47,8 @@ def load_my_state_dict(model, state_dict):
                 state_str = str(list(state_dict.keys())[step])
             else:
                 state_str = ""
-            file.write(str(step) + "\t" + own_str + "\t" + state_str + "\n") 
+            file.write(str(step) + "\t" + own_str + "\t" + state_str + "\n")
+        """
         
         not_loaded = []
         missing = []
@@ -80,7 +83,7 @@ def load_my_state_dict(model, state_dict):
                 else:
                     pass
             if not loaded:
-                print(name, " not loaded")
+                # print(name, " not loaded")
                 not_loaded.append(name)
 
         file.write("\n")

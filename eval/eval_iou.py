@@ -15,10 +15,10 @@ from iouEval import iouEval, getColorEntry
 
 # verificare come utilizzare il parametro method
 
-def main(model, datadir, cpu, num_classes, ignoreIndex=19, PRINT=0):
+def main(model, datadir, cpu, num_classes, batch_size=1, ignoreIndex=19, PRINT=0):
 
     # load the dataset
-    loader = get_cityscapes_loader(datadir, 10, 'val')
+    loader = get_cityscapes_loader(datadir, batch_size, 'val')
 
     if PRINT != 0:
         print_index = random.sample(range(len(loader)), PRINT)
@@ -40,6 +40,9 @@ def main(model, datadir, cpu, num_classes, ignoreIndex=19, PRINT=0):
         inputs = Variable(images)
         with torch.no_grad():
             out = model(inputs)
+
+        #print(out.shape)
+        #print(out)
             
         # get the max logit value for each pixel
         outputs = out.max(1)[1].unsqueeze(1).data
